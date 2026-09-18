@@ -16,6 +16,7 @@ interface ActiveProcess {
 export class DownloadService {
   private queue: DownloadJob[] = [];
   private activeProcesses: Map<string, ActiveProcess> = new Map();
+  private notifiedPlaylists: Set<string> = new Set();
   private onProgressCallback?: (job: DownloadJob) => void;
   private onCompletedCallback?: (job: DownloadJob) => void;
   private onFailedCallback?: (job: DownloadJob) => void;
@@ -48,6 +49,14 @@ export class DownloadService {
   }): Promise<string> {
     const settings = storageService.getSettings();
     let destDir = options.destination || settings.downloadDirectory || process.env.HOME || '/tmp';
+
+    // If part of a playlist, reset notification lock for this playlist so new batch alerts properly
+    if (options.playlistId) {
+      this.notifiedPlaylists.delete(options.playlistId);
+    }
+    if (options.playlistTitle) {
+      this.notifiedPlaylists.delete(options.playlistTitle);
+    }
 
     // If part of a playlist and "create dedicated folder" is enabled
     if (options.playlistTitle && settings.createPlaylistFolder) {
@@ -270,6 +279,9 @@ export class DownloadService {
           : `Video: ${job.title}\nDownloaded at: ${formattedDate}`;
 
         notificationService.notify(notifTitle, notifBody);
+
+        // Check if the whole playlist has completed
+        this.checkPlaylistCompletion(job, isArabic, formattedDate);
       } else {
         job.status = 'failed';
         if (!job.errorMessage) {
@@ -300,6 +312,16 @@ export class DownloadService {
           ? `فشل تحميل: ${job.title}`
           : `Failed to download: ${job.title}`;
         notificationService.notify(notifTitle, notifBody);
+
+        const failedDate = new Date().toLocaleString(isArabic ? 'ar' : 'en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        this.checkPlaylistCompletion(job, isArabic, failedDate);
       }
 
       // Check next queued job
@@ -410,6 +432,56 @@ export class DownloadService {
       return parts[0] * 60 + parts[1];
     }
     return parts[0] || 0;
+  }
+
+  private checkPlaylistCompletion(job: DownloadJob, isArabic: boolean, formattedDate: string): void {
+    if (job.type !== 'playlist-item' || (!job.playlistId && !job.playlistTitle)) {
+      return;
+    }
+
+    const playlistKey = job.playlistId || job.playlistTitle!;
+    const playlistJobs = this.queue.filter(
+      (j) =>
+        j.type === 'playlist-item' &&
+        ((job.playlistId && j.playlistId === job.playlistId) ||
+          (job.playlistTitle && j.playlistTitle === job.playlistTitle))
+    );
+
+    if (playlistJobs.length === 0) return;
+
+    // Check if any playlist items are still in progress
+    const hasRemaining = playlistJobs.some(
+      (j) => j.status === 'pending' || j.status === 'downloading' || j.status === 'paused'
+    );
+
+    if (!hasRemaining && !this.notifiedPlaylists.has(playlistKey)) {
+      this.notifiedPlaylists.add(playlistKey);
+
+      const completedCount = playlistJobs.filter((j) => j.status === 'completed').length;
+      const failedCount = playlistJobs.filter((j) => j.status === 'failed').length;
+      const totalCount = playlistJobs.length;
+      const playlistName = job.playlistTitle || 'Playlist';
+
+      // Only notify if at least one item was completed
+      if (completedCount === 0) return;
+
+      const playlistNotifTitle = isArabic
+        ? 'اكتمل تحميل قائمة التشغيل بنجاح! 📂🎉'
+        : 'Playlist Downloaded Successfully! 📂🎉';
+
+      let playlistNotifBody: string;
+      if (failedCount === 0) {
+        playlistNotifBody = isArabic
+          ? `قائمة التشغيل: ${playlistName}\nتم تحميل جميع الفيديوهات (${completedCount} فيديو) بنجاح\nتاريخ التحميل: ${formattedDate}`
+          : `Playlist: ${playlistName}\nAll ${completedCount} videos downloaded successfully\nDownloaded at: ${formattedDate}`;
+      } else {
+        playlistNotifBody = isArabic
+          ? `قائمة التشغيل: ${playlistName}\nتم تحميل ${completedCount} من ${totalCount} فيديو بنجاح (${failedCount} تعذر تحميله)\nتاريخ التحميل: ${formattedDate}`
+          : `Playlist: ${playlistName}\n${completedCount} of ${totalCount} videos downloaded successfully (${failedCount} failed)\nDownloaded at: ${formattedDate}`;
+      }
+
+      notificationService.notify(playlistNotifTitle, playlistNotifBody);
+    }
   }
 }
 

@@ -61,6 +61,27 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
         const activeCount = newJobs.filter(
           (j) => j.status === 'downloading' || j.status === 'processing'
         ).length;
+        // Check if full playlist completed
+        if (completedJob.type === 'playlist-item' && (completedJob.playlistId || completedJob.playlistTitle)) {
+          const playlistJobs = newJobs.filter(
+            (j) =>
+              j.type === 'playlist-item' &&
+              ((completedJob.playlistId && j.playlistId === completedJob.playlistId) ||
+                (completedJob.playlistTitle && j.playlistTitle === completedJob.playlistTitle))
+          );
+          const hasRemaining = playlistJobs.some(
+            (j) => j.status === 'pending' || j.status === 'downloading' || j.status === 'processing' || j.status === 'paused'
+          );
+          if (!hasRemaining && playlistJobs.length > 0 && playlistJobs.every((j) => j.status === 'completed')) {
+            useAppStore
+              .getState()
+              .addToast(
+                `Playlist "${completedJob.playlistTitle || 'Playlist'}" (${playlistJobs.length} videos) completed! 📂🎉`,
+                'success'
+              );
+          }
+        }
+
         return { jobs: newJobs, activeCount };
       });
       useAppStore.getState().addToast(`Finished downloading: ${completedJob.title}`, 'success');
