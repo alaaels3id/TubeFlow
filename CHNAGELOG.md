@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-09-18
+
+### ✨ Features & Improvements
+
+#### 🔔 Enhanced Download Notifications
+- **Video Title in Notification Body**: System notifications now clearly display the exact title/name of the completed video download (`Video: <title>` / `اسم الفيديو: <العنوان>`).
+- **Completion Timestamp**: Added exact localized date and time of completion to the notification body (`Downloaded at: <date>` / `تاريخ التحميل: <التاريخ>`).
+- **Dynamic Localization**: Automatically formats notification messages and timestamps according to user language preference (`ar` for Arabic, `en-US` for English).
+- **Bilingual Failure Alerts**: Standardized download failure notifications with bilingual error titles and status icons (`فشل التحميل ❌` / `Download Failed ❌`).
+
+---
+
 ## [1.0.0] - 2026-09-18
 
 ### 🚀 Initial Release
