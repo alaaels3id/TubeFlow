@@ -1,0 +1,154 @@
+export const en = {
+  app: {
+    name: 'TubeFlow',
+    tagline: 'Modern YouTube Media Manager',
+    disclaimer: 'Use this application only for content you are authorized to download.'
+  },
+  nav: {
+    dashboard: 'Dashboard',
+    downloads: 'Downloads',
+    history: 'History',
+    settings: 'Settings'
+  },
+  dashboard: {
+    title: 'Download Video or Playlist',
+    subtitle: 'Paste any YouTube video or playlist link to analyze and download in high quality',
+    inputPlaceholder: 'Paste YouTube video or playlist URL...',
+    analyze: 'Analyze',
+    analyzing: 'Analyzing...',
+    pasteFromClipboard: 'Paste',
+    clear: 'Clear',
+    recentDownloads: 'Recent Activity',
+    activeDownloads: 'Active Downloads',
+    noRecent: 'No recent downloads yet. Paste a link above to get started!'
+  },
+  videoCard: {
+    channel: 'Channel',
+    duration: 'Duration',
+    quality: 'Quality',
+    format: 'Format',
+    destination: 'Save To',
+    changeDestination: 'Change',
+    approxSize: 'Approx. Size',
+    download: 'Download Video',
+    bestQuality: 'Best Available',
+    audioOnly: 'Audio Only'
+  },
+  playlist: {
+    title: 'Playlist Overview',
+    videosCount: '{{count}} videos found',
+    selectAll: 'Select All',
+    deselectAll: 'Deselect All',
+    selectedCount: '{{count}} selected',
+    createFolder: 'Create dedicated playlist folder',
+    quality: 'Target Quality',
+    format: 'Target Format',
+    downloadSelected: 'Download Selected ({{count}})',
+    emptySelection: 'Please select at least one video to download'
+  },
+  downloads: {
+    title: 'Download Queue',
+    subtitle: 'Monitor active downloads, pending queue, and transfer speeds',
+    activeCount: '{{count}} Active',
+    speed: 'Speed',
+    eta: 'Remaining',
+    size: 'Size',
+    pause: 'Pause',
+    resume: 'Resume',
+    cancel: 'Cancel',
+    retry: 'Retry',
+    openFile: 'Open File',
+    openFolder: 'Show in Finder',
+    remove: 'Remove',
+    noDownloads: 'No active downloads in the queue.',
+    status: {
+      pending: 'Pending',
+      analyzing: 'Analyzing',
+      downloading: 'Downloading',
+      processing: 'Processing Media',
+      completed: 'Completed',
+      paused: 'Paused',
+      cancelled: 'Cancelled',
+      failed: 'Failed'
+    }
+  },
+  history: {
+    title: 'Download History',
+    subtitle: 'View your completed and previous download records',
+    searchPlaceholder: 'Search downloads by title or channel...',
+    filterAll: 'All',
+    filterCompleted: 'Completed',
+    filterFailed: 'Failed',
+    filterCancelled: 'Cancelled',
+    clearHistory: 'Clear History',
+    confirmClearTitle: 'Clear Download History?',
+    confirmClearMessage: 'This will remove all history records. Downloaded files on your disk will not be deleted.',
+    empty: 'Your download history is empty.'
+  },
+  settings: {
+    title: 'Application Settings',
+    subtitle: 'Configure download preferences, appearance, and system integration',
+    general: 'General',
+    appearance: 'Appearance',
+    language: 'Language',
+    downloads: 'Downloads & Concurrency',
+    about: 'About & Dependencies',
+    
+    downloadDirectory: 'Default Download Directory',
+    chooseDirectory: 'Browse',
+    notifications: 'Show native desktop notifications',
+    notificationsDesc: 'Get notified when downloads finish or fail',
+    sendTestNotification: 'Send Test Notification',
+    testNotificationTitle: 'TubeFlow Notification Test',
+    testNotificationBody: 'Desktop notifications are working with custom logo! 🌊',
+    testNotificationSent: 'Test notification sent',
+    confirmDelete: 'Confirm before removing items from queue or history',
+    
+    theme: 'Interface Theme',
+    themeSystem: 'System Default',
+    themeLight: 'Light (Clean)',
+    themeDark: 'Dark (Night Bordeaux)',
+    
+    fontSize: 'Font Size',
+    fontSmall: 'Small (88%)',
+    fontMedium: 'Medium (100%)',
+    fontLarge: 'Large (112%)',
+    fontXLarge: 'Extra Large (125%)',
+    
+    concurrency: 'Concurrent Downloads',
+    concurrencyDesc: 'Maximum simultaneous downloads (1 - 5)',
+    duplicateAction: 'When File Already Exists',
+    duplicateReplace: 'Replace Existing File',
+    duplicateCopy: 'Create Numbered Copy',
+    duplicateSkip: 'Skip Download',
+
+    dependencies: 'System Binaries',
+    ytDlpStatus: 'yt-dlp Engine',
+    ffmpegStatus: 'FFmpeg Muxer',
+    installed: 'Ready',
+    missing: 'Not Detected',
+    version: 'Version',
+    
+    saveSuccess: 'Settings saved successfully'
+  },
+  common: {
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    delete: 'Delete',
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
+    close: 'Close',
+    bytes: 'Bytes',
+    kb: 'KB',
+    mb: 'MB',
+    gb: 'GB'
+  },
+  errors: {
+    invalidUrl: 'The URL is not a valid supported YouTube video or playlist link.',
+    networkError: 'Unable to connect. Please check your internet connection and try again.',
+    contentUnavailable: 'This content is unavailable or cannot be downloaded.',
+    permissionError: 'Cannot write to the selected download folder. Please check permissions.',
+    generic: 'Something went wrong while processing this request.'
+  }
+};

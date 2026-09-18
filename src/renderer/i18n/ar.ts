@@ -1,0 +1,154 @@
+export const ar = {
+  app: {
+    name: 'تيوب فلو',
+    tagline: 'مدير تنزيل وسائط يوتيوب الحديث',
+    disclaimer: 'استخدم هذا التطبيق فقط لتنزيل المحتوى الذي تملك الصلاحية أو الحق القانوني في تنزيله.'
+  },
+  nav: {
+    dashboard: 'الرئيسية',
+    downloads: 'التنزيلات',
+    history: 'السجل',
+    settings: 'الإعدادات'
+  },
+  dashboard: {
+    title: 'تنزيل فيديو أو قائمة تشغيل',
+    subtitle: 'الصق رابط أي فيديو أو قائمة تشغيل من يوتيوب لتحليلها وتنزيلها بأعلى جودة متوفرة',
+    inputPlaceholder: 'الصق رابط فيديو أو قائمة تشغيل يوتيوب هنا...',
+    analyze: 'تحليل',
+    analyzing: 'جاري التحليل...',
+    pasteFromClipboard: 'لصق',
+    clear: 'مسح',
+    recentDownloads: 'النشاط الأخير',
+    activeDownloads: 'تنزيلات قيد العمل',
+    noRecent: 'لا توجد تنزيلات سابقة. الصق رابطاً في الأعلى للبدء!'
+  },
+  videoCard: {
+    channel: 'القناة',
+    duration: 'المدة',
+    quality: 'الجودة',
+    format: 'الصيغة',
+    destination: 'حفظ في',
+    changeDestination: 'تغيير',
+    approxSize: 'الحجم التقريبي',
+    download: 'تنزيل الفيديو',
+    bestQuality: 'أعلى جودة متوفرة',
+    audioOnly: 'صوت فقط'
+  },
+  playlist: {
+    title: 'نظرة عامة على قائمة التشغيل',
+    videosCount: 'تم العثور على {{count}} فيديو',
+    selectAll: 'تحديد الكل',
+    deselectAll: 'إلغاء تحديد الكل',
+    selectedCount: 'تم تحديد {{count}}',
+    createFolder: 'إنشاء مجلد مخصص لقائمة التشغيل',
+    quality: 'الجودة المستهدفة',
+    format: 'الصيغة المستهدفة',
+    downloadSelected: 'تنزيل المحددة ({{count}})',
+    emptySelection: 'يرجى تحديد فيديو واحد على الأقل للبدء بالتنزيل'
+  },
+  downloads: {
+    title: 'قائمة انتظار التنزيل',
+    subtitle: 'متابعة سرعات النقل والملفات النشطة وقيد الانتظار',
+    activeCount: '{{count}} قيد العمل',
+    speed: 'السرعة',
+    eta: 'المتبقي',
+    size: 'الحجم',
+    pause: 'إيقاف مؤقت',
+    resume: 'استئناف',
+    cancel: 'إلغاء',
+    retry: 'إعادة المحاولة',
+    openFile: 'فتح الملف',
+    openFolder: 'عرض في فايندر',
+    remove: 'حذف',
+    noDownloads: 'لا توجد تنزيلات نشطة في القائمة حالياً.',
+    status: {
+      pending: 'قيد الانتظار',
+      analyzing: 'جاري التحليل',
+      downloading: 'جاري التنزيل',
+      processing: 'معالجة الوسائط',
+      completed: 'مكتمل',
+      paused: 'موقوف مؤقتاً',
+      cancelled: 'تم الإلغاء',
+      failed: 'فشل التنزيل'
+    }
+  },
+  history: {
+    title: 'سجل التنزيلات',
+    subtitle: 'استعراض التنزيلات السابقة والمكتملة على جهازك',
+    searchPlaceholder: 'البحث في التنزيلات حسب العنوان أو القناة...',
+    filterAll: 'الكل',
+    filterCompleted: 'المكتملة',
+    filterFailed: 'الفاشلة',
+    filterCancelled: 'الملغاة',
+    clearHistory: 'مسح السجل',
+    confirmClearTitle: 'مسح سجل التنزيلات؟',
+    confirmClearMessage: 'سيؤدي هذا إلى مسح قيود السجل فقط. لن يتم حذف الملفات المحملة من القرص.',
+    empty: 'سجل التنزيلات فارغ حتى الآن.'
+  },
+  settings: {
+    title: 'إعدادات التطبيق',
+    subtitle: 'تخصيص تفضيلات التنزيل والمظهر واللغة وسلوك النظام',
+    general: 'عام',
+    appearance: 'المظهر',
+    language: 'اللغة',
+    downloads: 'التنزيلات والتزامن',
+    about: 'حول التطبيق والمحركات',
+    
+    downloadDirectory: 'مجلد التنزيل الافتراضي',
+    chooseDirectory: 'استعراض',
+    notifications: 'تفعيل إشعارات سطح المكتب',
+    notificationsDesc: 'استلم إشعاراً عند اكتمال التحميل أو حدوث خطأ',
+    sendTestNotification: 'إرسال إشعار تجريبي',
+    testNotificationTitle: 'تجربة إشعارات تيوب فلو',
+    testNotificationBody: 'إشعارات سطح المكتب تعمل بنجاح مع شعار التطبيق المخصص! 🌊',
+    testNotificationSent: 'تم إرسال الإشعار التجريبي للنظام',
+    confirmDelete: 'تأكيد الحذف قبل إزالة العناصر من القائمة أو السجل',
+    
+    theme: 'سمة الواجهة',
+    themeSystem: 'حسب إعدادات النظام',
+    themeLight: 'فاتح (أنيق)',
+    themeDark: 'داكن (نبيذي بوردو)',
+    
+    fontSize: 'حجم الخط',
+    fontSmall: 'صغير (88%)',
+    fontMedium: 'متوسط (100%)',
+    fontLarge: 'كبير (112%)',
+    fontXLarge: 'كبير جداً (125%)',
+    
+    concurrency: 'عدد التنزيلات المتزامنة',
+    concurrencyDesc: 'الحد الأقصى للتنزيلات التي تعمل في نفس الوقت (1 - 5)',
+    duplicateAction: 'عند وجود ملف بنفس الاسم',
+    duplicateReplace: 'استبدال الملف القديم',
+    duplicateCopy: 'إنشاء نسخة مرقمة جديدة',
+    duplicateSkip: 'تخطي التنزيل',
+
+    dependencies: 'المحركات والبرمجيات المساعدة',
+    ytDlpStatus: 'محرك yt-dlp',
+    ffmpegStatus: 'محرك FFmpeg',
+    installed: 'جاهز ويعمل',
+    missing: 'غير متوفر',
+    version: 'الإصدار',
+    
+    saveSuccess: 'تم حفظ الإعدادات بنجاح'
+  },
+  common: {
+    cancel: 'إلغاء',
+    confirm: 'تأكيد',
+    delete: 'حذف',
+    loading: 'جاري التحميل...',
+    error: 'خطأ',
+    success: 'نجاح',
+    close: 'إغلاق',
+    bytes: 'بايت',
+    kb: 'ك.ب',
+    mb: 'م.ب',
+    gb: 'ج.ب'
+  },
+  errors: {
+    invalidUrl: 'الرابط المدخل غير صالح أو ليس رابط فيديو أو قائمة تشغيل يوتيوب مدعوم.',
+    networkError: 'تعذر الاتصال بالشبكة. يرجى التأكد من اتصال الإنترنت ثم المحاولة ثانية.',
+    contentUnavailable: 'هذا المحتوى غير متوفر أو يتعذر تنزيله.',
+    permissionError: 'لا تتوفر صلاحيات للكتابة في مجلد التنزيل المحدد.',
+    generic: 'حدث خطأ غير متوقع أثناء معالجة الطلب.'
+  }
+};
