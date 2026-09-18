@@ -252,16 +252,22 @@ export class DownloadService {
           playlistTitle: job.playlistTitle
         });
 
-        // Calculate elapsed time
-        const startTime = job.createdAt ? new Date(job.createdAt).getTime() : Date.now();
-        const elapsedSecs = Math.max(1, Math.round((Date.now() - startTime) / 1000));
-        const timeFormatted = formatDuration(elapsedSecs);
+        const currentSettings = storageService.getSettings();
+        const isArabic = currentSettings.language === 'ar';
+        const completedDate = new Date();
+        const formattedDate = completedDate.toLocaleString(isArabic ? 'ar' : 'en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
 
-        const isArabic = settings.language === 'ar';
         const notifTitle = isArabic ? 'اكتمل التحميل بنجاح 🎉' : 'Download Completed 🎉';
         const notifBody = isArabic
-          ? `اكتمل تحميل "${job.title}" خلال ${timeFormatted}`
-          : `Finished downloading "${job.title}" in ${timeFormatted}`;
+          ? `اسم الفيديو: ${job.title}\nتاريخ التحميل: ${formattedDate}`
+          : `Video: ${job.title}\nDownloaded at: ${formattedDate}`;
 
         notificationService.notify(notifTitle, notifBody);
       } else {
@@ -287,7 +293,13 @@ export class DownloadService {
           playlistTitle: job.playlistTitle
         });
 
-        notificationService.notify('Download Failed', `Failed to download: ${job.title}`);
+        const currentSettings = storageService.getSettings();
+        const isArabic = currentSettings.language === 'ar';
+        const notifTitle = isArabic ? 'فشل التحميل ❌' : 'Download Failed ❌';
+        const notifBody = isArabic
+          ? `فشل تحميل: ${job.title}`
+          : `Failed to download: ${job.title}`;
+        notificationService.notify(notifTitle, notifBody);
       }
 
       // Check next queued job
