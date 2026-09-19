@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features & Improvements
 
+#### 🔄 In-App Auto-Updater & Version Management
+- **Automated Update Engine**: Integrated `electron-updater` configured with GitHub Releases (`alaaels3id/TubeFlow`), supporting checking, downloading, and replacing the old version with the new version seamlessly via `quitAndInstall()`.
+- **Dedicated Updates Section in Settings**: Added an "Application Updates" management card in Settings featuring:
+  - Dynamic version display and interactive "Check for Updates" button with animated status.
+  - Release notes preview and new version details when an update is detected.
+  - Live download progress bar showing percentage, bytes transferred, and transfer speed.
+  - One-click "Restart & Install Update" button to apply updates and restart instantly.
+- **Dynamic Versioning & Badges**: Replaced static version labels across the entire app with live versioning from Electron (`app.getVersion()`), adding an update indicator badge (`NEW`) in the Sidebar when an update is available.
+- **Background Checks & Fallback**: Performs an unobtrusive background update check shortly after launch, with a direct GitHub Releases API fallback for release notes and testing.
+- **Full Bilingual Localization**: Complete Arabic and English translations for all updater states, progress bars, and action buttons.
+
 #### 📁 Dedicated Playlist Folders & Intelligent Naming
 - **Dedicated Playlist Folders**: Every playlist is now automatically saved into its own dedicated separated folder inside the Downloads directory (`Downloads/<Playlist Name>/`).
 - **Intelligent Show & Series Detection**: Replaces generic fallback names (such as `"show"` or `"playlist"`) with actual series and show titles (e.g. `مسلسل عمر`) extracted from metadata, series tags, and episode title patterns.
