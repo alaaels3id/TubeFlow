@@ -84,6 +84,19 @@ export class DownloadService {
       }
     }
 
+    // Prevent duplicate download jobs if the same video is already pending or downloading in the destination
+    const existingJob = this.queue.find(
+      (j) =>
+        (j.status === 'pending' || j.status === 'downloading') &&
+        j.url === options.url &&
+        j.format === (options.format || settings.defaultFormat || 'mp4') &&
+        j.destination === destDir
+    );
+    if (existingJob) {
+      console.log(`[DOWNLOAD] Skipping duplicate download for: ${options.title} (already in queue with id: ${existingJob.id})`);
+      return existingJob.id;
+    }
+
     const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
     const job: DownloadJob = {

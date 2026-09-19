@@ -174,13 +174,65 @@ export class MetadataService {
 
         try {
           const data = JSON.parse(stdout);
-          const entries = Array.isArray(data.entries) ? data.entries : [];
+          const rawEntries = Array.isArray(data.entries) ? data.entries : [];
 
-          if (entries.length === 0) {
+          if (rawEntries.length === 0) {
             return reject(new Error('This playlist or show contains no accessible videos or is unavailable in your region.'));
           }
 
-          const items: PlaylistItem[] = entries.map((e: any, index: number) => {
+          // Filter out duplicate entries and unavailable/private items
+          const seenIds = new Set<string>();
+          const seenUrls = new Set<string>();
+          const seenTitles = new Set<string>();
+          const uniqueEntries: any[] = [];
+
+          for (const e of rawEntries) {
+            if (!e) continue;
+
+            const videoId = e.id ? String(e.id).trim() : '';
+            const rawUrl = e.url ? String(e.url).trim() : '';
+            const cleanUrl = rawUrl.startsWith('http')
+              ? rawUrl.split('&')[0]
+              : (videoId ? `https://www.youtube.com/watch?v=${videoId}` : '');
+            const rawTitle = (e.title || '').trim();
+            const normalizedTitle = rawTitle.toLowerCase();
+
+            // Skip deleted or private placeholders
+            if (
+              normalizedTitle === '[deleted video]' ||
+              normalizedTitle === '[private video]' ||
+              normalizedTitle === 'private video' ||
+              normalizedTitle === 'deleted video'
+            ) {
+              continue;
+            }
+
+            // Deduplicate by ID
+            if (videoId && seenIds.has(videoId)) {
+              continue;
+            }
+
+            // Deduplicate by URL
+            if (cleanUrl && seenUrls.has(cleanUrl)) {
+              continue;
+            }
+
+            // Deduplicate by Title if identical
+            if (normalizedTitle && seenTitles.has(normalizedTitle)) {
+              continue;
+            }
+
+            if (videoId) seenIds.add(videoId);
+            if (cleanUrl) seenUrls.add(cleanUrl);
+            if (normalizedTitle) seenTitles.add(normalizedTitle);
+            uniqueEntries.push(e);
+          }
+
+          if (uniqueEntries.length === 0) {
+            return reject(new Error('This playlist contains no accessible videos.'));
+          }
+
+          const items: PlaylistItem[] = uniqueEntries.map((e: any, index: number) => {
             const dur = Math.round(e.duration || 0);
             return {
               id: e.id || `item-${index + 1}`,

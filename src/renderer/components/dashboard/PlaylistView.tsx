@@ -16,23 +16,46 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
   const { addToast, setActiveTab } = useAppStore();
   const { t } = useI18n();
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    new Set(playlist.items.map((item) => item.id))
-  );
-
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'default'>('asc');
 
   const sortedItems = useMemo(() => {
-    if (sortOrder === 'default') {
-      return playlist.items;
+    // Deduplicate playlist items by ID, URL, or normalized title
+    const seenIds = new Set<string>();
+    const seenUrls = new Set<string>();
+    const seenTitles = new Set<string>();
+    const unique: typeof playlist.items = [];
+
+    for (const item of playlist.items) {
+      if (!item) continue;
+      const id = (item.id || '').trim();
+      const url = (item.url || '').trim();
+      const title = (item.title || '').trim().toLowerCase();
+
+      if (id && seenIds.has(id)) continue;
+      if (url && seenUrls.has(url)) continue;
+      if (title && seenTitles.has(title)) continue;
+
+      if (id) seenIds.add(id);
+      if (url) seenUrls.add(url);
+      if (title) seenTitles.add(title);
+      unique.push(item);
     }
-    const items = [...playlist.items];
+
+    if (sortOrder === 'default') {
+      return unique;
+    }
+
+    const items = [...unique];
     items.sort((a, b) => {
       const cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
       return sortOrder === 'asc' ? cmp : -cmp;
     });
     return items;
   }, [playlist.items, sortOrder]);
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    new Set(sortedItems.map((item) => item.id))
+  );
 
   const [targetQuality, setTargetQuality] = useState<string>(settings.defaultQuality || '1080p');
   const [targetFormat, setTargetFormat] = useState<'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus'>(
@@ -43,10 +66,10 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === playlist.items.length) {
+    if (selectedIds.size === sortedItems.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(playlist.items.map((item) => item.id)));
+      setSelectedIds(new Set(sortedItems.map((item) => item.id)));
     }
   };
 
@@ -68,10 +91,14 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
 
     setIsDownloading(true);
     let enqueuedCount = 0;
+    const enqueuedUrls = new Set<string>();
 
     const selectedVideos = sortedItems.filter((item) => selectedIds.has(item.id));
 
     for (const video of selectedVideos) {
+      if (enqueuedUrls.has(video.url)) continue;
+      enqueuedUrls.add(video.url);
+
       await addJob({
         url: video.url,
         type: 'playlist-item',
@@ -92,7 +119,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
     setActiveTab('downloads');
   };
 
-  const allSelected = selectedIds.size === playlist.items.length;
+  const allSelected = selectedIds.size === sortedItems.length;
 
   return (
     <div className="card animate-fade-in" style={{ padding: 22 }}>
@@ -119,7 +146,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
                 {playlist.title}
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-                {playlist.channel} • {t('playlist.videosCount', { count: playlist.itemCount })}
+                {playlist.channel} • {t('playlist.videosCount', { count: sortedItems.length })}
               </p>
             </div>
           </div>
