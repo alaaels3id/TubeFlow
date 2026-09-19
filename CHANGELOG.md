@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-09-19
+
+### ✨ Features & Improvements
+
+#### 📁 Dedicated Playlist Folders & Intelligent Naming
+- **Dedicated Playlist Folders**: Every playlist is now automatically saved into its own dedicated separated folder inside the Downloads directory (`Downloads/<Playlist Name>/`).
+- **Intelligent Show & Series Detection**: Replaces generic fallback names (such as `"show"` or `"playlist"`) with actual series and show titles (e.g. `مسلسل عمر`) extracted from metadata, series tags, and episode title patterns.
+- **Editable Playlist & Folder Name**: Added an inline edit control on the playlist overview card, allowing users to customize the playlist title and folder name directly before downloading.
+- **Folder Path Preview**: Displays the exact target subfolder name next to the folder toggle option.
+
+#### 🎯 Smart Exclusion of Already Downloaded Videos
+- **Automatic Exclusion**: Videos in a playlist that have already been downloaded in history are automatically filtered out, displaying only remaining un-downloaded videos ready for download.
+- **Toggle Visibility**: Added a toggle button (`Hide Downloaded` / `Show All`) with status indicators and green `Downloaded` (`تم التحميل`) badges.
+- **Selection Synchronization**: "Select All" and "Download Selected" actions operate strictly on remaining un-downloaded items to prevent accidental duplicate downloads.
+
+#### 🔀 Playlist & Queue Sorting
+- **ASC / DESC / Original Sorting**: Users can sort playlist items in ascending numerical order (`1 → N`), descending (`N → 1`), or restore the original order.
+- **Queue Sorting Controls**: Added queue sorting toggle to sort downloads alphabetically or by episode index.
+
+#### 🧹 Cleaner Playlist Extraction & Queue Safeguards
+- **Private & Deleted Video Skipping**: Automatically ignores deleted and private videos during playlist parsing.
+- **Duplicate Prevention**: Filters out identical video entries within playlists and blocks duplicate pending/downloading jobs in the queue.
+
+#### 🐛 Bug Fixes
+- **Dashboard Layout Clipping**: Resolved a flexbox shrinking issue in `.main-content` that caused the URL analyzer card to collapse and clip its title and inputs when analyzing large playlists.
+
+---
+
 ## [1.1.0] - 2026-09-18
 
 ### ✨ Features & Improvements
