@@ -51,7 +51,9 @@ export const en = {
     hideDownloaded: 'Hide Downloaded ({{count}})',
     showAll: 'Show All',
     alreadyDownloaded: '{{count}} already downloaded',
-    downloadedBadge: 'Downloaded'
+    downloadedBadge: 'Downloaded',
+    folderPreview: 'Folder: {{folder}}',
+    editTitle: 'Edit playlist name'
   },
   downloads: {
     title: 'Download Queue',

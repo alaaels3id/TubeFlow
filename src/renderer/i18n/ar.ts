@@ -51,7 +51,9 @@ export const ar = {
     hideDownloaded: 'إخفاء المحمّل مسبقاً ({{count}})',
     showAll: 'عرض الكل',
     alreadyDownloaded: 'تم تحميل {{count}} مسبقاً',
-    downloadedBadge: 'تم التحميل'
+    downloadedBadge: 'تم التحميل',
+    folderPreview: 'المجلد: {{folder}}',
+    editTitle: 'تعديل اسم القائمة'
   },
   downloads: {
     title: 'قائمة انتظار التنزيل',

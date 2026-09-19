@@ -71,9 +71,17 @@ export class DownloadService {
       this.notifiedPlaylists.delete(options.playlistTitle);
     }
 
-    // If part of a playlist and "create dedicated folder" is enabled
-    if (options.playlistTitle && settings.createPlaylistFolder) {
-      destDir = path.join(destDir, sanitizeFilename(options.playlistTitle));
+    // Ensure every playlist is placed in its own dedicated separated folder inside downloads directory
+    const isPlaylistItem = options.type === 'playlist-item' || !!options.playlistId || !!options.playlistTitle;
+    if (isPlaylistItem) {
+      const playlistName = options.playlistTitle || (options.playlistId ? `Playlist_${options.playlistId}` : 'Playlist');
+      const folderName = sanitizeFilename(playlistName);
+      if (folderName) {
+        const normalizedDest = path.normalize(destDir);
+        if (path.basename(normalizedDest) !== folderName) {
+          destDir = path.join(destDir, folderName);
+        }
+      }
     }
 
     if (!fs.existsSync(destDir)) {

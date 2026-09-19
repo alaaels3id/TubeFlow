@@ -247,10 +247,53 @@ export class MetadataService {
             };
           });
 
+          // Intelligent and clean title resolution for playlists and shows
+          let resolvedTitle = (data.playlist_title || data.title || '').trim();
+          const isGeneric =
+            !resolvedTitle ||
+            resolvedTitle.toLowerCase() === 'show' ||
+            resolvedTitle.toLowerCase() === 'playlist' ||
+            resolvedTitle.toLowerCase() === 'youtube playlist';
+
+          if (isGeneric) {
+            if (data.series && typeof data.series === 'string' && data.series.trim()) {
+              resolvedTitle = data.series.trim();
+            } else if (data.show && typeof data.show === 'string' && data.show.trim()) {
+              resolvedTitle = data.show.trim();
+            } else if (items.length > 0 && items[0].title) {
+              const firstTitle = items[0].title;
+              // Check if first title contains standard episode markers:
+              // e.g. "مسلسل عمر - الحلقة 1", "Vikings - Season 1 Episode 1", "Series #1"
+              const match = firstTitle.match(/^(.*?)\s*(?:[-–—|:]\s*(?:الحلقة|حلقة|Episode|Ep\.?|Part|جزء|\d+)|#\d+)/i);
+              if (match && match[1] && match[1].trim().length > 2) {
+                resolvedTitle = match[1].trim();
+              } else {
+                // Find common prefix among items
+                const sampleTitles = items.slice(0, Math.min(6, items.length)).map((i) => i.title);
+                let prefix = sampleTitles[0] || '';
+                for (let i = 1; i < sampleTitles.length; i++) {
+                  while (!sampleTitles[i].startsWith(prefix) && prefix.length > 0) {
+                    prefix = prefix.slice(0, -1);
+                  }
+                }
+                prefix = prefix.replace(/[-–—|:_#\s]+$/, '').trim();
+                if (prefix.length > 2) {
+                  resolvedTitle = prefix;
+                } else if (data.uploader || data.channel) {
+                  resolvedTitle = `${data.uploader || data.channel} Playlist`;
+                }
+              }
+            }
+          }
+
+          if (!resolvedTitle) {
+            resolvedTitle = 'YouTube Playlist';
+          }
+
           const playlist: PlaylistMetadata = {
             id: data.id || 'playlist',
             url: data.webpage_url || url,
-            title: data.title || 'YouTube Playlist',
+            title: resolvedTitle,
             thumbnail: data.thumbnail || (items[0] ? items[0].thumbnail : ''),
             channel: data.uploader || data.channel || 'YouTube Playlist',
             itemCount: items.length,

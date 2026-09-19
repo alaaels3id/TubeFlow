@@ -9,7 +9,10 @@ import {
   ArrowUpDown,
   Eye,
   EyeOff,
-  CheckCircle2
+  CheckCircle2,
+  Edit2,
+  Check,
+  Folder
 } from 'lucide-react';
 import { PlaylistMetadata, PlaylistItem } from '@shared/types';
 import { useSettingsStore } from '../../stores/useSettingsStore';
@@ -119,6 +122,12 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
 
   const [createFolder, setCreateFolder] = useState<boolean>(settings.createPlaylistFolder ?? true);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [playlistTitle, setPlaylistTitle] = useState<string>(playlist.title || 'Playlist');
+  const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
+
+  useEffect(() => {
+    setPlaylistTitle(playlist.title || 'Playlist');
+  }, [playlist.title]);
 
   const toggleSelectAll = () => {
     const selectable = displayItems.filter((item) => (hideDownloaded ? true : !isItemDownloaded(item)));
@@ -151,6 +160,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
     const enqueuedUrls = new Set<string>();
 
     const selectedVideos = displayItems.filter((item) => selectedIds.has(item.id));
+    const finalTitle = playlistTitle.trim() || playlist.title || 'Playlist';
 
     for (const video of selectedVideos) {
       if (enqueuedUrls.has(video.url)) continue;
@@ -160,7 +170,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
         url: video.url,
         type: 'playlist-item',
         playlistId: playlist.id,
-        playlistTitle: playlist.title,
+        playlistTitle: finalTitle,
         title: video.title,
         thumbnail: video.thumbnail,
         channel: video.channel || playlist.channel,
@@ -200,9 +210,42 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
               <ListMusic size={24} />
             </div>
             <div>
-              <h3 style={{ fontSize: 'var(--font-size-md)', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {playlist.title}
-              </h3>
+              {isEditingTitle ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <input
+                    type="text"
+                    className="input-control"
+                    style={{ height: 30, fontSize: 'var(--font-size-sm)', padding: '2px 8px', fontWeight: 600, width: 260 }}
+                    value={playlistTitle}
+                    onChange={(e) => setPlaylistTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') setIsEditingTitle(false);
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    className="btn btn-ghost btn-icon"
+                    onClick={() => setIsEditingTitle(false)}
+                    style={{ height: 28, width: 28, padding: 0 }}
+                  >
+                    <Check size={16} color="var(--color-success, #10b981)" />
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <h3 style={{ fontSize: 'var(--font-size-md)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {playlistTitle}
+                  </h3>
+                  <button
+                    className="btn btn-ghost btn-icon"
+                    onClick={() => setIsEditingTitle(true)}
+                    title={t('playlist.editTitle')}
+                    style={{ height: 24, width: 24, padding: 0, opacity: 0.7 }}
+                  >
+                    <Edit2 size={13} />
+                  </button>
+                </div>
+              )}
               <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)' }}>
                 {playlist.channel} • {t('playlist.videosCount', { count: displayItems.length })}
                 {downloadedCount > 0 && (
@@ -275,18 +318,42 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
             border: '1px solid var(--border-subtle)'
           }}
         >
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}>
-            <input
-              type="checkbox"
-              checked={createFolder}
-              onChange={(e) => {
-                setCreateFolder(e.target.checked);
-                updateSettings({ createPlaylistFolder: e.target.checked });
-              }}
-            />
-            <FolderPlus size={16} color="var(--color-primary-500)" />
-            <span>{t('playlist.createFolder')}</span>
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}>
+              <input
+                type="checkbox"
+                checked={createFolder}
+                onChange={(e) => {
+                  setCreateFolder(e.target.checked);
+                  updateSettings({ createPlaylistFolder: e.target.checked });
+                }}
+              />
+              <FolderPlus size={16} color="var(--color-primary-500)" />
+              <span>{t('playlist.createFolder')}</span>
+            </label>
+
+            {createFolder && (
+              <span
+                style={{
+                  fontSize: 'var(--font-size-xs)',
+                  color: 'var(--text-secondary)',
+                  backgroundColor: 'var(--bg-surface)',
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-subtle)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5
+                }}
+                title={t('playlist.folderPreview', { folder: playlistTitle })}
+              >
+                <Folder size={12} color="var(--color-primary-500)" />
+                <span style={{ fontWeight: 500, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {playlistTitle}
+                </span>
+              </span>
+            )}
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
