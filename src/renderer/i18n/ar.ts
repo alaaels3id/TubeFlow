@@ -47,7 +47,11 @@ export const ar = {
     emptySelection: 'يرجى تحديد فيديو واحد على الأقل للبدء بالتنزيل',
     sortAsc: 'ترتيب تصاعدي (1 ← N)',
     sortDesc: 'ترتيب تنازلي (N ← 1)',
-    sortOriginal: 'الترتيب الأصلي'
+    sortOriginal: 'الترتيب الأصلي',
+    hideDownloaded: 'إخفاء المحمّل مسبقاً ({{count}})',
+    showAll: 'عرض الكل',
+    alreadyDownloaded: 'تم تحميل {{count}} مسبقاً',
+    downloadedBadge: 'تم التحميل'
   },
   downloads: {
     title: 'قائمة انتظار التنزيل',

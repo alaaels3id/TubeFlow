@@ -47,7 +47,11 @@ export const en = {
     emptySelection: 'Please select at least one video to download',
     sortAsc: 'Sort ASC (1 → N)',
     sortDesc: 'Sort DESC (N → 1)',
-    sortOriginal: 'Original Order'
+    sortOriginal: 'Original Order',
+    hideDownloaded: 'Hide Downloaded ({{count}})',
+    showAll: 'Show All',
+    alreadyDownloaded: '{{count}} already downloaded',
+    downloadedBadge: 'Downloaded'
   },
   downloads: {
     title: 'Download Queue',

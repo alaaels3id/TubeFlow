@@ -1,8 +1,20 @@
-import React, { useState, useMemo } from 'react';
-import { ListMusic, Download, CheckSquare, Square, FolderPlus, Clock, ArrowUpDown } from 'lucide-react';
-import { PlaylistMetadata } from '@shared/types';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  ListMusic,
+  Download,
+  CheckSquare,
+  Square,
+  FolderPlus,
+  Clock,
+  ArrowUpDown,
+  Eye,
+  EyeOff,
+  CheckCircle2
+} from 'lucide-react';
+import { PlaylistMetadata, PlaylistItem } from '@shared/types';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { useQueueStore } from '../../stores/useQueueStore';
+import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { useI18n } from '../../hooks/useI18n';
 
@@ -13,17 +25,42 @@ interface PlaylistViewProps {
 export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
   const { settings, updateSettings } = useSettingsStore();
   const { addJob } = useQueueStore();
+  const { history } = useHistoryStore();
   const { addToast, setActiveTab } = useAppStore();
   const { t } = useI18n();
 
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'default'>('asc');
+  const [hideDownloaded, setHideDownloaded] = useState<boolean>(true);
+
+  // Helper to detect if a playlist item was already downloaded in history
+  const isItemDownloaded = (item: PlaylistItem) => {
+    if (item.isDownloaded) return true;
+    const itemId = item.id ? item.id.trim() : '';
+    const itemUrl = item.url ? item.url.split('&')[0].trim() : '';
+    const itemNormTitle = (item.title || '')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
+
+    return history.some((h) => {
+      if (h.status !== 'completed') return false;
+      const hUrl = h.url ? h.url.split('&')[0].trim() : '';
+      if (itemUrl && hUrl && itemUrl === hUrl) return true;
+      if (itemId && (h.id === itemId || (h.url && h.url.includes(itemId)))) return true;
+      if (itemNormTitle && h.title) {
+        const hNorm = h.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+        if (hNorm === itemNormTitle) return true;
+      }
+      return false;
+    });
+  };
 
   const sortedItems = useMemo(() => {
     // Deduplicate playlist items by ID, URL, or normalized title
     const seenIds = new Set<string>();
     const seenUrls = new Set<string>();
     const seenTitles = new Set<string>();
-    const unique: typeof playlist.items = [];
+    const unique: PlaylistItem[] = [];
 
     for (const item of playlist.items) {
       if (!item) continue;
@@ -53,9 +90,27 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
     return items;
   }, [playlist.items, sortOrder]);
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    new Set(sortedItems.map((item) => item.id))
-  );
+  const downloadedCount = useMemo(() => {
+    return sortedItems.filter((item) => isItemDownloaded(item)).length;
+  }, [sortedItems, history]);
+
+  // Exclude already-downloaded videos by default so only un-downloaded remain
+  const displayItems = useMemo(() => {
+    if (!hideDownloaded) {
+      return sortedItems;
+    }
+    return sortedItems.filter((item) => !isItemDownloaded(item));
+  }, [sortedItems, hideDownloaded, history]);
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+    return new Set(displayItems.map((item) => item.id));
+  });
+
+  useEffect(() => {
+    setSelectedIds(
+      new Set(displayItems.filter((item) => (hideDownloaded ? true : !isItemDownloaded(item))).map((item) => item.id))
+    );
+  }, [displayItems, hideDownloaded]);
 
   const [targetQuality, setTargetQuality] = useState<string>(settings.defaultQuality || '1080p');
   const [targetFormat, setTargetFormat] = useState<'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus'>(
@@ -66,14 +121,16 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === sortedItems.length) {
+    const selectable = displayItems.filter((item) => (hideDownloaded ? true : !isItemDownloaded(item)));
+    if (selectedIds.size === selectable.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(sortedItems.map((item) => item.id)));
+      setSelectedIds(new Set(selectable.map((item) => item.id)));
     }
   };
 
-  const toggleItem = (id: string) => {
+  const toggleItem = (id: string, isDownloaded?: boolean) => {
+    if (isDownloaded) return;
     const next = new Set(selectedIds);
     if (next.has(id)) {
       next.delete(id);
@@ -93,7 +150,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
     let enqueuedCount = 0;
     const enqueuedUrls = new Set<string>();
 
-    const selectedVideos = sortedItems.filter((item) => selectedIds.has(item.id));
+    const selectedVideos = displayItems.filter((item) => selectedIds.has(item.id));
 
     for (const video of selectedVideos) {
       if (enqueuedUrls.has(video.url)) continue;
@@ -119,7 +176,8 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
     setActiveTab('downloads');
   };
 
-  const allSelected = selectedIds.size === sortedItems.length;
+  const selectableCount = displayItems.filter((item) => (hideDownloaded ? true : !isItemDownloaded(item))).length;
+  const allSelected = selectableCount > 0 && selectedIds.size === selectableCount;
 
   return (
     <div className="card animate-fade-in" style={{ padding: 22 }}>
@@ -146,12 +204,29 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
                 {playlist.title}
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-                {playlist.channel} • {t('playlist.videosCount', { count: sortedItems.length })}
+                {playlist.channel} • {t('playlist.videosCount', { count: displayItems.length })}
+                {downloadedCount > 0 && (
+                  <span style={{ marginInlineStart: 6, color: 'var(--color-success, #10b981)', fontWeight: 500 }}>
+                    • ({t('playlist.alreadyDownloaded', { count: downloadedCount })})
+                  </span>
+                )}
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {downloadedCount > 0 && (
+              <button
+                className="btn btn-secondary"
+                onClick={() => setHideDownloaded((prev) => !prev)}
+                style={{ fontSize: 'var(--font-size-xs)' }}
+                title={hideDownloaded ? t('playlist.showAll') : t('playlist.hideDownloaded', { count: downloadedCount })}
+              >
+                {hideDownloaded ? <Eye size={14} /> : <EyeOff size={14} />}
+                <span>{hideDownloaded ? t('playlist.showAll') : t('playlist.hideDownloaded', { count: downloadedCount })}</span>
+              </button>
+            )}
+
             <button
               className="btn btn-secondary"
               onClick={() =>
@@ -273,84 +348,124 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
             borderRadius: 'var(--radius-md)'
           }}
         >
-          {sortedItems.map((item, displayIdx) => {
-            const isSelected = selectedIds.has(item.id);
-            return (
-              <div
-                key={item.id}
-                onClick={() => toggleItem(item.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 14px',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  backgroundColor: isSelected ? 'var(--bg-surface-elevated)' : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'background-color var(--transition-fast)'
-                }}
+          {displayItems.length === 0 ? (
+            <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <CheckCircle2 size={36} style={{ margin: '0 auto 10px', color: 'var(--color-success, #10b981)' }} />
+              <p style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)' }}>
+                {t('playlist.alreadyDownloaded', { count: downloadedCount })}
+              </p>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setHideDownloaded(false)}
+                style={{ marginTop: 12, fontSize: 'var(--font-size-xs)' }}
               >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => {}} // handled by row click
-                  style={{ cursor: 'pointer' }}
-                />
-
-                <span
-                  style={{
-                    fontSize: 'var(--font-size-xs)',
-                    color: 'var(--text-muted)',
-                    width: 24,
-                    textAlign: 'center'
-                  }}
-                >
-                  {sortOrder === 'default' ? item.index : displayIdx + 1}
-                </span>
-
-                {item.thumbnail && (
-                  <img
-                    src={item.thumbnail}
-                    alt={item.title}
-                    style={{
-                      width: 54,
-                      height: 34,
-                      borderRadius: 'var(--radius-sm)',
-                      objectFit: 'cover'
-                    }}
-                  />
-                )}
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 'var(--font-size-sm)',
-                      fontWeight: 500,
-                      color: 'var(--text-primary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}
-                  >
-                    {item.title}
-                  </div>
-                </div>
-
+                <Eye size={14} />
+                <span>{t('playlist.showAll')}</span>
+              </button>
+            </div>
+          ) : (
+            displayItems.map((item, displayIdx) => {
+              const downloaded = isItemDownloaded(item);
+              const isSelected = selectedIds.has(item.id);
+              return (
                 <div
+                  key={item.id}
+                  onClick={() => toggleItem(item.id, downloaded)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 4,
-                    fontSize: 'var(--font-size-xs)',
-                    color: 'var(--text-muted)'
+                    gap: 12,
+                    padding: '10px 14px',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    backgroundColor: isSelected ? 'var(--bg-surface-elevated)' : 'transparent',
+                    cursor: downloaded ? 'default' : 'pointer',
+                    opacity: downloaded ? 0.65 : 1,
+                    transition: 'background-color var(--transition-fast)'
                   }}
                 >
-                  <Clock size={12} />
-                  <span>{item.durationString}</span>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    disabled={downloaded}
+                    onChange={() => {}} // handled by row click
+                    style={{ cursor: downloaded ? 'not-allowed' : 'pointer' }}
+                  />
+
+                  <span
+                    style={{
+                      fontSize: 'var(--font-size-xs)',
+                      color: 'var(--text-muted)',
+                      width: 24,
+                      textAlign: 'center'
+                    }}
+                  >
+                    {sortOrder === 'default' ? item.index : displayIdx + 1}
+                  </span>
+
+                  {item.thumbnail && (
+                    <img
+                      src={item.thumbnail}
+                      alt={item.title}
+                      style={{
+                        width: 54,
+                        height: 34,
+                        borderRadius: 'var(--radius-sm)',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  )}
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 'var(--font-size-sm)',
+                        fontWeight: 500,
+                        color: 'var(--text-primary)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {item.title}
+                    </div>
+                  </div>
+
+                  {downloaded && (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                        color: 'var(--color-success, #10b981)',
+                        borderRadius: '9999px',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}
+                    >
+                      <CheckCircle2 size={12} />
+                      {t('playlist.downloadedBadge')}
+                    </span>
+                  )}
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 'var(--font-size-xs)',
+                      color: 'var(--text-muted)'
+                    }}
+                  >
+                    <Clock size={12} />
+                    <span>{item.durationString}</span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>

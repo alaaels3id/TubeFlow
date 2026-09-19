@@ -49,6 +49,7 @@ export interface PlaylistItem {
   durationString: string;
   index: number;
   selected?: boolean;
+  isDownloaded?: boolean;
 }
 
 export interface PlaylistMetadata {
