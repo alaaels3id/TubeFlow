@@ -24,6 +24,7 @@ interface QueueStore {
   cancelJob: (id: string) => Promise<void>;
   retryJob: (id: string) => Promise<void>;
   removeJob: (id: string) => Promise<void>;
+  sortQueue: (order?: 'asc' | 'desc') => Promise<void>;
   openFile: (filePath: string) => Promise<void>;
   openFolder: (filePath: string) => Promise<void>;
 }
@@ -170,6 +171,27 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
       }));
     } catch (e) {
       console.error('Failed to remove job:', e);
+    }
+  },
+
+  sortQueue: async (order = 'asc') => {
+    try {
+      if (window.api && (window.api as any).sortQueue) {
+        const sorted = await (window.api as any).sortQueue(order);
+        set({ jobs: sorted });
+      } else {
+        set((state) => {
+          const active = state.jobs.filter((j) => j.status === 'downloading' || j.status === 'processing');
+          const others = state.jobs.filter((j) => j.status !== 'downloading' && j.status !== 'processing');
+          others.sort((a, b) => {
+            const cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+            return order === 'asc' ? cmp : -cmp;
+          });
+          return { jobs: [...active, ...others] };
+        });
+      }
+    } catch (e) {
+      console.error('Failed to sort queue:', e);
     }
   },
 

@@ -59,6 +59,10 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     return downloadService.removeDownload(id);
   });
 
+  ipcMain.handle('download:sortQueue', async (_event, order: 'asc' | 'desc') => {
+    return downloadService.sortQueue(order);
+  });
+
   ipcMain.handle('download:openFile', async (_event, filePath: string) => {
     if (!filePath) return false;
     const res = await shell.openPath(filePath);

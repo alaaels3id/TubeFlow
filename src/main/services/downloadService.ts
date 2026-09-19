@@ -35,6 +35,19 @@ export class DownloadService {
     return this.queue;
   }
 
+  public sortQueue(order: 'asc' | 'desc' = 'asc'): DownloadJob[] {
+    const active = this.queue.filter((j) => j.status === 'downloading' || j.status === 'processing');
+    const others = this.queue.filter((j) => j.status !== 'downloading' && j.status !== 'processing');
+
+    others.sort((a, b) => {
+      const cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+      return order === 'asc' ? cmp : -cmp;
+    });
+
+    this.queue = [...active, ...others];
+    return this.queue;
+  }
+
   public async startDownload(options: {
     url: string;
     type: 'video' | 'playlist-item';

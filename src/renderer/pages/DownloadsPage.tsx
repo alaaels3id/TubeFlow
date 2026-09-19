@@ -1,14 +1,21 @@
-import React from 'react';
-import { Download, PlusCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, PlusCircle, ArrowUpDown } from 'lucide-react';
 import { DownloadItem } from '../components/downloads/DownloadItem';
 import { useQueueStore } from '../stores/useQueueStore';
 import { useAppStore } from '../stores/useAppStore';
 import { useI18n } from '../hooks/useI18n';
 
 export const DownloadsPage: React.FC = () => {
-  const { jobs, activeCount } = useQueueStore();
+  const { jobs, activeCount, sortQueue } = useQueueStore();
   const { setActiveTab } = useAppStore();
   const { t } = useI18n();
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleToggleSort = () => {
+    const next = sortOrder === 'asc' ? 'desc' : 'asc';
+    setSortOrder(next);
+    sortQueue(next);
+  };
 
   return (
     <div className="main-content">
@@ -22,11 +29,25 @@ export const DownloadsPage: React.FC = () => {
           </p>
         </div>
 
-        {activeCount > 0 && (
-          <span className="badge badge-info" style={{ padding: '6px 12px', fontSize: 'var(--font-size-xs)' }}>
-            {t('downloads.activeCount', { count: activeCount })}
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {jobs.length > 1 && (
+            <button
+              className="btn btn-secondary"
+              onClick={handleToggleSort}
+              style={{ fontSize: 'var(--font-size-xs)', height: 32 }}
+              title={sortOrder === 'asc' ? t('downloads.sortDesc') : t('downloads.sortAsc')}
+            >
+              <ArrowUpDown size={14} />
+              <span>{sortOrder === 'asc' ? t('downloads.sortAsc') : t('downloads.sortDesc')}</span>
+            </button>
+          )}
+
+          {activeCount > 0 && (
+            <span className="badge badge-info" style={{ padding: '6px 12px', fontSize: 'var(--font-size-xs)' }}>
+              {t('downloads.activeCount', { count: activeCount })}
+            </span>
+          )}
+        </div>
       </div>
 
       {jobs.length > 0 ? (

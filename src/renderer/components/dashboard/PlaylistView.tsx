@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ListMusic, Download, CheckSquare, Square, FolderPlus, Clock } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { ListMusic, Download, CheckSquare, Square, FolderPlus, Clock, ArrowUpDown } from 'lucide-react';
 import { PlaylistMetadata } from '@shared/types';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { useQueueStore } from '../../stores/useQueueStore';
@@ -19,6 +19,20 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     new Set(playlist.items.map((item) => item.id))
   );
+
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'default'>('asc');
+
+  const sortedItems = useMemo(() => {
+    if (sortOrder === 'default') {
+      return playlist.items;
+    }
+    const items = [...playlist.items];
+    items.sort((a, b) => {
+      const cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
+    return items;
+  }, [playlist.items, sortOrder]);
 
   const [targetQuality, setTargetQuality] = useState<string>(settings.defaultQuality || '1080p');
   const [targetFormat, setTargetFormat] = useState<'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus'>(
@@ -55,7 +69,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
     setIsDownloading(true);
     let enqueuedCount = 0;
 
-    const selectedVideos = playlist.items.filter((item) => selectedIds.has(item.id));
+    const selectedVideos = sortedItems.filter((item) => selectedIds.has(item.id));
 
     for (const video of selectedVideos) {
       await addJob({
@@ -111,6 +125,30 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              className="btn btn-secondary"
+              onClick={() =>
+                setSortOrder((prev) => (prev === 'asc' ? 'desc' : prev === 'desc' ? 'default' : 'asc'))
+              }
+              style={{ fontSize: 'var(--font-size-xs)' }}
+              title={
+                sortOrder === 'asc'
+                  ? t('playlist.sortAsc')
+                  : sortOrder === 'desc'
+                  ? t('playlist.sortDesc')
+                  : t('playlist.sortOriginal')
+              }
+            >
+              <ArrowUpDown size={14} />
+              <span>
+                {sortOrder === 'asc'
+                  ? t('playlist.sortAsc')
+                  : sortOrder === 'desc'
+                  ? t('playlist.sortDesc')
+                  : t('playlist.sortOriginal')}
+              </span>
+            </button>
+
             <button className="btn btn-secondary" onClick={toggleSelectAll} style={{ fontSize: 'var(--font-size-xs)' }}>
               {allSelected ? <CheckSquare size={15} /> : <Square size={15} />}
               <span>{allSelected ? t('playlist.deselectAll') : t('playlist.selectAll')}</span>
@@ -208,7 +246,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
             borderRadius: 'var(--radius-md)'
           }}
         >
-          {playlist.items.map((item) => {
+          {sortedItems.map((item, displayIdx) => {
             const isSelected = selectedIds.has(item.id);
             return (
               <div
@@ -240,7 +278,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
                     textAlign: 'center'
                   }}
                 >
-                  {item.index}
+                  {sortOrder === 'default' ? item.index : displayIdx + 1}
                 </span>
 
                 {item.thumbnail && (

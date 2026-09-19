@@ -11,6 +11,7 @@ const api: ElectronAPI = {
   cancelDownload: (id: string) => ipcRenderer.invoke('download:cancel', id),
   retryDownload: (id: string) => ipcRenderer.invoke('download:retry', id),
   removeDownload: (id: string) => ipcRenderer.invoke('download:remove', id),
+  sortQueue: (order: 'asc' | 'desc') => ipcRenderer.invoke('download:sortQueue', order),
   openFile: (filePath: string) => ipcRenderer.invoke('download:openFile', filePath),
   openFolder: (filePath: string) => ipcRenderer.invoke('download:openFolder', filePath),
 

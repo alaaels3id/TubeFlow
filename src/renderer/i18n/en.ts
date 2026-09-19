@@ -44,12 +44,17 @@ export const en = {
     quality: 'Target Quality',
     format: 'Target Format',
     downloadSelected: 'Download Selected ({{count}})',
-    emptySelection: 'Please select at least one video to download'
+    emptySelection: 'Please select at least one video to download',
+    sortAsc: 'Sort ASC (1 → N)',
+    sortDesc: 'Sort DESC (N → 1)',
+    sortOriginal: 'Original Order'
   },
   downloads: {
     title: 'Download Queue',
     subtitle: 'Monitor active downloads, pending queue, and transfer speeds',
     activeCount: '{{count}} Active',
+    sortAsc: 'Sort ASC',
+    sortDesc: 'Sort DESC',
     speed: 'Speed',
     eta: 'Remaining',
     size: 'Size',

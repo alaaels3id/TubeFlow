@@ -28,6 +28,7 @@ export interface ElectronAPI {
   cancelDownload: (id: string) => Promise<boolean>;
   retryDownload: (id: string) => Promise<boolean>;
   removeDownload: (id: string) => Promise<boolean>;
+  sortQueue: (order: 'asc' | 'desc') => Promise<DownloadJob[]>;
   openFile: (filePath: string) => Promise<boolean>;
   openFolder: (filePath: string) => Promise<boolean>;
   

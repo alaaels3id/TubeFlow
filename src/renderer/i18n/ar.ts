@@ -44,12 +44,17 @@ export const ar = {
     quality: 'الجودة المستهدفة',
     format: 'الصيغة المستهدفة',
     downloadSelected: 'تنزيل المحددة ({{count}})',
-    emptySelection: 'يرجى تحديد فيديو واحد على الأقل للبدء بالتنزيل'
+    emptySelection: 'يرجى تحديد فيديو واحد على الأقل للبدء بالتنزيل',
+    sortAsc: 'ترتيب تصاعدي (1 ← N)',
+    sortDesc: 'ترتيب تنازلي (N ← 1)',
+    sortOriginal: 'الترتيب الأصلي'
   },
   downloads: {
     title: 'قائمة انتظار التنزيل',
     subtitle: 'متابعة سرعات النقل والملفات النشطة وقيد الانتظار',
     activeCount: '{{count}} قيد العمل',
+    sortAsc: 'ترتيب تصاعدي',
+    sortDesc: 'ترتيب تنازلي',
     speed: 'السرعة',
     eta: 'المتبقي',
     size: 'الحجم',
