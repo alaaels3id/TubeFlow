@@ -392,7 +392,7 @@
   height: 100%;
   background: linear-gradient(90deg, var(--color-primary-500), var(--color-accent-500));
   border-radius: var(--radius-full);
-  transition: width 0.3s ease;
+  transition: width 0.25s ease-out;
 }
 
 /* Modal / Dialog */

@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Clock,
   Zap,
-  HardDrive
+  HardDrive,
+  RefreshCw
 } from 'lucide-react';
 import { DownloadJob } from '@shared/types';
 import { useQueueStore } from '../../stores/useQueueStore';
@@ -27,6 +28,7 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
   const { t } = useI18n();
 
   const isDownloading = job.status === 'downloading';
+  const isProcessing = job.status === 'processing';
   const isPaused = job.status === 'paused';
   const isCompleted = job.status === 'completed';
   const isFailed = job.status === 'failed';
@@ -34,6 +36,7 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
 
   let badgeClass = 'badge-neutral';
   if (isDownloading) badgeClass = 'badge-info';
+  else if (isProcessing) badgeClass = 'badge-primary';
   else if (isCompleted) badgeClass = 'badge-success';
   else if (isFailed) badgeClass = 'badge-error';
   else if (isPaused) badgeClass = 'badge-warning';
@@ -160,6 +163,13 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Clock size={12} />
                   <span>{formatDuration(job.remainingSeconds)}</span>
+                </span>
+              )}
+
+              {isProcessing && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--color-primary-400)' }}>
+                  <RefreshCw size={12} className="animate-spin" />
+                  <span>{t('downloads.status.processing')}</span>
                 </span>
               )}
 

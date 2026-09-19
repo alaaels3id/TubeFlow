@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-09-19
+
+### ✨ Features & Improvements
+
+#### 📊 Monotonic & Seamless Progress Bar
+- **Multi-Stream Dual Phasing**: Separates video and audio stream tracking so high-resolution downloads (`bestvideo+bestaudio`) map video from **0% to 85%** and audio from **85% to 98%**, completely eliminating the abrupt progress bar reset from 100% back to 0%.
+- **Cumulative Byte Tracking**: Combines downloaded and total bytes across both video and audio streams so displayed sizes continuously increase.
+- **Monotonic Guards**: Applied strict non-decreasing safeguards on both backend and client state, guaranteeing the progress bar only moves forward.
+- **Fluid Animation**: Upgraded progress fill transition with `ease-out` timing for responsive, natural forward motion.
+
+#### ⏱️ Stabilized Monotonic Countdown Remaining Time (ETA)
+- **Decaying Countdown Filter**: Replaced instantaneous burst spikes with a steady decaying countdown that decrements second-by-second towards completion (`00:00`).
+- **Speed Smoothing (EMA)**: Utilizes Exponential Moving Average for speed calculation across the entire job to filter out packet stalls and burst variations.
+- **Spike Dampening**: Network jitter and momentary latency no longer trigger wild swings between seconds and minutes.
+
+#### ⚙️ Media Processing State Feedback
+- **Processing Status & Spinner**: Surfaced `processing` status with a spinning activity indicator and localized badges (`معالجة الوسائط` / `Processing Media`) while `ffmpeg` is merging or converting streams.
+
+#### 🛠️ Robust Binary & Engine Detection
+- **macOS Gatekeeper Accommodation**: Increased verification timeout to 20 seconds to prevent false-negative "Not Detected" states caused by macOS Gatekeeper security verification on cold start.
+- **Automated Executable Permissions**: Automatically ensures `chmod 0755` permissions on bundled binaries with fallback candidate searching.
+
+---
+
 ## [1.2.0] - 2026-09-19
 
 ### ✨ Features & Improvements

@@ -34,7 +34,14 @@ export class BinaryService {
     ];
 
     for (const candidate of ytDlpCandidates) {
-      if (candidate === 'yt-dlp' || (fs.existsSync(candidate) && fs.statSync(candidate).isFile())) {
+      if (candidate === 'yt-dlp') {
+        this.ytDlpPath = candidate;
+        break;
+      }
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        try {
+          fs.chmodSync(candidate, 0o755);
+        } catch {}
         this.ytDlpPath = candidate;
         break;
       }
@@ -50,7 +57,14 @@ export class BinaryService {
     ];
 
     for (const candidate of ffmpegCandidates) {
-      if (candidate === 'ffmpeg' || (fs.existsSync(candidate) && fs.statSync(candidate).isFile())) {
+      if (candidate === 'ffmpeg') {
+        this.ffmpegPath = candidate;
+        break;
+      }
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        try {
+          fs.chmodSync(candidate, 0o755);
+        } catch {}
         this.ffmpegPath = candidate;
         break;
       }
@@ -58,31 +72,75 @@ export class BinaryService {
   }
 
   public async getDependencies(): Promise<SystemDependencies> {
-    this.detectPaths();
+    const isDev = !app.isPackaged;
+    const projectRoot = isDev ? process.cwd() : path.dirname(app.getPath('exe'));
+    const userData = app.getPath('userData');
+    const resources = process.resourcesPath || '';
 
-    // Check yt-dlp
+    const ytCandidates = [
+      this.ytDlpPath,
+      path.join(resources, 'bin', 'yt-dlp'),
+      path.join(projectRoot, 'bin', 'yt-dlp'),
+      path.join(userData, 'bin', 'yt-dlp'),
+      '/opt/homebrew/bin/yt-dlp',
+      '/usr/local/bin/yt-dlp',
+      'yt-dlp'
+    ].filter(Boolean);
+
     let ytAvailable = false;
-    let ytVer: string | undefined;
-    try {
-      const { stdout } = await execFileAsync(this.ytDlpPath, ['--version'], { timeout: 5000 });
-      ytVer = stdout.trim();
-      ytAvailable = true;
-      this.ytDlpVersion = ytVer;
-    } catch {
-      ytAvailable = false;
+    let ytVer = this.ytDlpVersion;
+
+    for (const cand of ytCandidates) {
+      if (cand !== 'yt-dlp') {
+        if (!fs.existsSync(cand) || !fs.statSync(cand).isFile()) continue;
+        try {
+          fs.chmodSync(cand, 0o755);
+        } catch {}
+      }
+
+      try {
+        const { stdout } = await execFileAsync(cand, ['--version'], { timeout: 20000 });
+        ytVer = stdout.trim();
+        ytAvailable = true;
+        this.ytDlpVersion = ytVer;
+        this.ytDlpPath = cand;
+        break;
+      } catch {
+        // Continue to next candidate
+      }
     }
 
-    // Check ffmpeg
+    const ffmpegCandidates = [
+      this.ffmpegPath,
+      path.join(resources, 'bin', 'ffmpeg'),
+      '/opt/homebrew/bin/ffmpeg',
+      '/usr/local/bin/ffmpeg',
+      path.join(projectRoot, 'bin', 'ffmpeg'),
+      'ffmpeg'
+    ].filter(Boolean);
+
     let ffmpegAvailable = false;
-    let ffmpegVer: string | undefined;
-    try {
-      const { stdout } = await execFileAsync(this.ffmpegPath, ['-version'], { timeout: 5000 });
-      const firstLine = stdout.split('\n')[0] || '';
-      ffmpegVer = firstLine.replace('ffmpeg version ', '').split(' ')[0];
-      ffmpegAvailable = true;
-      this.ffmpegVersion = ffmpegVer;
-    } catch {
-      ffmpegAvailable = false;
+    let ffmpegVer = this.ffmpegVersion;
+
+    for (const cand of ffmpegCandidates) {
+      if (cand !== 'ffmpeg') {
+        if (!fs.existsSync(cand) || !fs.statSync(cand).isFile()) continue;
+        try {
+          fs.chmodSync(cand, 0o755);
+        } catch {}
+      }
+
+      try {
+        const { stdout } = await execFileAsync(cand, ['-version'], { timeout: 10000 });
+        const firstLine = stdout.split('\n')[0] || '';
+        ffmpegVer = firstLine.replace('ffmpeg version ', '').split(' ')[0];
+        ffmpegAvailable = true;
+        this.ffmpegVersion = ffmpegVer;
+        this.ffmpegPath = cand;
+        break;
+      } catch {
+        // Continue to next candidate
+      }
     }
 
     return {

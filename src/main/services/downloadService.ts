@@ -176,7 +176,7 @@ export class DownloadService {
       '--no-playlist',
       '--ffmpeg-location', ffmpeg,
       '-o', outputPattern,
-      '--progress-template', '%(progress._percent_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s|%(progress._eta_str)s'
+      '--progress-template', '%(info.vcodec)s|%(progress._percent_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s|%(progress._eta_str)s'
     ];
 
     // Duplicate behavior
@@ -202,18 +202,35 @@ export class DownloadService {
     }
 
     let detectedFilePath = '';
+    let isDualStream = !isAudioOnly; // Assume dual-stream for video unless format line says otherwise
+    let videoDownloaded = 0;
+    let videoTotal = 0;
+    let audioDownloaded = 0;
+    let audioTotal = 0;
+    let emaSpeed = 0;
+    let lastEtaUpdate = Date.now();
+    let currentEta = 0;
+    let stdoutBuffer = '';
 
     const proc = spawn(ytDlp, args);
     const activeItem: ActiveProcess = { job, process: proc };
     this.activeProcesses.set(job.id, activeItem);
 
     proc.stdout.on('data', (data) => {
-      const text = data.toString();
-      const lines = text.split('\n');
+      stdoutBuffer += data.toString();
+      const lines = stdoutBuffer.split(/\r\n|\r|\n/);
+      // Keep unfinished fragment in buffer
+      stdoutBuffer = lines.pop() || '';
 
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
+
+        // Check if format output specifies multi-stream (e.g. "Downloading 1 format(s): 395+251")
+        const formatMatch = trimmed.match(/Downloading \d+ format\(s\):\s*(\S+)/);
+        if (formatMatch) {
+          isDualStream = formatMatch[1].includes('+');
+        }
 
         // Check for output file indication
         // [download] Destination: /path/to/file or [Merger] Merging formats into "/path/to/file"
@@ -223,29 +240,107 @@ export class DownloadService {
           job.filePath = detectedFilePath;
         }
 
-        // Parse custom progress template: percent|downloaded|total|speed|eta
+        // Check for merger or postprocess
+        if (trimmed.includes('[Merger]') || trimmed.includes('[ExtractAudio]') || trimmed.includes('[Fixup')) {
+          job.status = 'processing';
+          job.progress = Math.max(job.progress, 99);
+          job.speed = 0;
+          job.remainingSeconds = 0;
+          this.emitProgress(job);
+          continue;
+        }
+
+        // Parse custom progress template: vcodec|percent|downloaded|total|speed|eta
         const parts = trimmed.split('|');
-        if (parts.length === 5) {
-          const rawPercent = parts[0].replace('%', '').trim();
-          const percent = parseFloat(rawPercent);
-          if (!isNaN(percent)) {
-            job.progress = Math.min(100, Math.max(0, Math.round(percent)));
+        if (parts.length === 6) {
+          const vcodec = parts[0].trim();
+          const rawPercent = parseFloat(parts[1].replace('%', '').trim());
+          const percent = isNaN(rawPercent) ? 0 : Math.min(100, Math.max(0, rawPercent));
+          const currentDownloaded = this.parseSize(parts[2].trim());
+          const currentTotal = this.parseSize(parts[3].trim());
+          const instantSpeed = this.parseSize(parts[4].trim());
+          const rawEta = this.parseEta(parts[5].trim());
+
+          // Update smoothed speed (Exponential Moving Average)
+          if (instantSpeed > 0) {
+            emaSpeed = emaSpeed === 0 ? instantSpeed : Math.round(0.25 * instantSpeed + 0.75 * emaSpeed);
+            job.speed = emaSpeed;
           }
 
-          // Parse bytes / human strings
-          const downloadedStr = parts[1].trim();
-          const totalStr = parts[2].trim();
-          job.downloadedBytes = this.parseSize(downloadedStr);
-          job.totalBytes = this.parseSize(totalStr);
+          if (isDualStream) {
+            const isAudioStream = vcodec === 'none';
+            if (!isAudioStream) {
+              // Video stream phase (0% -> 85%)
+              videoDownloaded = Math.max(videoDownloaded, currentDownloaded);
+              if (currentTotal > 0) videoTotal = Math.max(videoTotal, currentTotal);
 
-          // Speed
-          const speedStr = parts[3].trim();
-          job.speed = this.parseSize(speedStr);
+              const mappedPercent = Math.min(85, Math.round(percent * 0.85));
+              job.progress = Math.max(job.progress, mappedPercent);
+              job.downloadedBytes = Math.max(job.downloadedBytes, videoDownloaded);
 
-          // ETA
-          const etaStr = parts[4].trim();
-          job.remainingSeconds = this.parseEta(etaStr);
+              // Estimate total with ~15% audio overhead
+              const estimatedTotal = videoTotal > 0 ? Math.round(videoTotal / 0.85) : 0;
+              job.totalBytes = Math.max(job.totalBytes, estimatedTotal);
+            } else {
+              // Audio stream phase (85% -> 98%)
+              audioDownloaded = Math.max(audioDownloaded, currentDownloaded);
+              if (currentTotal > 0) audioTotal = Math.max(audioTotal, currentTotal);
 
+              const mappedPercent = Math.min(98, Math.round(85 + (percent * 0.13)));
+              job.progress = Math.max(job.progress, mappedPercent);
+
+              const combinedDownloaded = videoDownloaded + audioDownloaded;
+              const combinedTotal = (videoTotal || videoDownloaded) + (audioTotal || 0);
+              job.downloadedBytes = Math.max(job.downloadedBytes, combinedDownloaded);
+              if (combinedTotal > 0) {
+                job.totalBytes = Math.max(job.totalBytes, combinedTotal);
+              }
+            }
+          } else {
+            // Single stream phase (0% -> 98%)
+            const mappedPercent = Math.min(98, Math.round(percent * 0.98));
+            job.progress = Math.max(job.progress, mappedPercent);
+            job.downloadedBytes = Math.max(job.downloadedBytes, currentDownloaded);
+            job.totalBytes = Math.max(job.totalBytes, currentTotal);
+          }
+
+          // Calculate smoothed, steadily decreasing ETA (countdown)
+          const now = Date.now();
+          const elapsedSec = (now - lastEtaUpdate) / 1000;
+          lastEtaUpdate = now;
+
+          // Decay previous ETA by elapsed real time
+          let targetEta = currentEta > 0 ? Math.max(0, currentEta - elapsedSec) : rawEta;
+
+          // If we have totalBytes and downloadedBytes and speed, compute whole-job ETA
+          if (job.totalBytes > job.downloadedBytes && emaSpeed > 0) {
+            const calculatedEta = Math.round((job.totalBytes - job.downloadedBytes) / emaSpeed);
+            if (currentEta === 0) {
+              targetEta = calculatedEta;
+            } else {
+              // Blend softly (85% countdown decay, 15% recalculated)
+              targetEta = 0.85 * targetEta + 0.15 * calculatedEta;
+            }
+          } else if (rawEta > 0 && currentEta === 0) {
+            targetEta = rawEta;
+          }
+
+          // Monotonic countdown constraint:
+          // Do not allow ETA to increase wildly due to short packet delays
+          const roundedTarget = Math.round(targetEta);
+          if (currentEta > 0) {
+            if (roundedTarget > currentEta) {
+              // Dampen upward spikes: allow at most +1 second only if stalled for >= 3 seconds
+              currentEta = currentEta + (elapsedSec >= 3 ? 1 : 0);
+            } else {
+              // Decreasing smoothly
+              currentEta = roundedTarget;
+            }
+          } else {
+            currentEta = roundedTarget;
+          }
+
+          job.remainingSeconds = currentEta;
           this.emitProgress(job);
         }
       }
@@ -268,6 +363,11 @@ export class DownloadService {
       if (code === 0) {
         job.status = 'completed';
         job.progress = 100;
+        job.speed = 0;
+        job.remainingSeconds = 0;
+        if (job.totalBytes > 0) {
+          job.downloadedBytes = job.totalBytes;
+        }
         job.completedAt = new Date().toISOString();
 
         // If filePath was not captured, estimate from title

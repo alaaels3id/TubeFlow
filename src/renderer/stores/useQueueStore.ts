@@ -43,7 +43,15 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
         let newJobs: DownloadJob[];
         if (index >= 0) {
           newJobs = [...state.jobs];
-          newJobs[index] = { ...newJobs[index], ...updatedJob };
+          const existing = newJobs[index];
+          const safeProgress = Math.max(existing.progress || 0, updatedJob.progress || 0);
+          const safeDownloaded = Math.max(existing.downloadedBytes || 0, updatedJob.downloadedBytes || 0);
+          newJobs[index] = {
+            ...existing,
+            ...updatedJob,
+            progress: safeProgress,
+            downloadedBytes: safeDownloaded
+          };
         } else {
           newJobs = [updatedJob, ...state.jobs];
         }
