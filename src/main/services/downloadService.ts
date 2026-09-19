@@ -160,12 +160,20 @@ export class DownloadService {
     const ffmpeg = binaryService.getFfmpegPath();
     const settings = storageService.getSettings();
 
+    // Ensure hidden temp directory exists inside destination folder
+    const tempDir = path.join(job.destination, '.tubeflow-temp');
+    try {
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+    } catch (e) {
+      console.error('Failed to create tempDir:', e);
+    }
+
     // Output template
     const filenameTemplate = job.type === 'playlist-item'
       ? '%(playlist_index&{:02d} - |)s%(title)s.%(ext)s'
       : '%(title)s.%(ext)s';
-
-    const outputPattern = path.join(job.destination, filenameTemplate);
 
     const isAudioOnly =
       ['mp3', 'm4a', 'opus'].includes(job.format) || job.quality === 'audio';
@@ -175,7 +183,9 @@ export class DownloadService {
       '--newline',
       '--no-playlist',
       '--ffmpeg-location', ffmpeg,
-      '-o', outputPattern,
+      '-P', `home:${job.destination}`,
+      '-P', `temp:${tempDir}`,
+      '-o', filenameTemplate,
       '--progress-template', '%(info.vcodec)s|%(progress._percent_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s|%(progress._eta_str)s'
     ];
 
@@ -233,11 +243,21 @@ export class DownloadService {
         }
 
         // Check for output file indication
-        // [download] Destination: /path/to/file or [Merger] Merging formats into "/path/to/file"
-        const destMatch = trimmed.match(/\[(?:download|Merger|ExtractAudio)\] (?:Destination:|Merging formats into )"?([^"\n]+)"?/);
-        if (destMatch && destMatch[1]) {
-          detectedFilePath = destMatch[1].trim();
+        // [MoveFiles] Moving file "..." to "..." or [download] Destination: ...
+        const moveMatch = trimmed.match(/\[MoveFiles\] Moving file "[^"]+" to "?([^"\n]+)"?/);
+        if (moveMatch && moveMatch[1]) {
+          detectedFilePath = moveMatch[1].trim();
           job.filePath = detectedFilePath;
+        } else {
+          const destMatch = trimmed.match(/\[(?:download|Merger|ExtractAudio)\] (?:Destination:|Merging formats into )"?([^"\n]+)"?/);
+          if (destMatch && destMatch[1]) {
+            let captured = destMatch[1].trim();
+            if (captured.includes('.tubeflow-temp')) {
+              captured = path.join(job.destination, path.basename(captured));
+            }
+            detectedFilePath = captured;
+            job.filePath = detectedFilePath;
+          }
         }
 
         // Check for merger or postprocess
@@ -359,6 +379,13 @@ export class DownloadService {
       if (activeItem.killedIntentional) {
         return; // Handled by pause or cancel method
       }
+
+      // Clean up tempDir if empty
+      try {
+        if (fs.existsSync(tempDir) && fs.readdirSync(tempDir).length === 0) {
+          fs.rmdirSync(tempDir);
+        }
+      } catch {}
 
       if (code === 0) {
         job.status = 'completed';

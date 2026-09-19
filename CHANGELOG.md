@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2026-09-19
+
+### ✨ Features & Improvements
+
+#### 🛡️ Hidden Temporary Fragment & Partial File Isolation
+- **Isolated Intermediate Downloads**: Redirects all intermediate `.part`, `.part-Frag*`, `.ytdl`, and partial stream files into a dedicated hidden directory (`.tubeflow-temp`) within the destination folder using `yt-dlp`'s `-P temp:` path mapping.
+- **Finder & Explorer Cleanliness**: Because the temporary folder name starts with a dot (`.`), it remains completely invisible by default in macOS Finder, Windows Explorer, and Linux file managers.
+- **Seamless Atomic File Finalization**: Only the final, fully merged, and verified media file is moved to the target folder upon completion via `[MoveFiles]`, preventing clutter and accidental user deletion of in-progress fragments.
+- **Automatic Lifecycle Cleanup**: Automatically cleans up the temporary folder once downloads are completed or cleared.
+
+---
+
 ## [1.3.0] - 2026-09-19
 
 ### ✨ Features & Improvements
