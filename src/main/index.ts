@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { registerIpcHandlers } from './ipc';
 import { getAppIconPath } from './notifications';
 import { loggerService } from './services/loggerService';
+import { updaterService } from './services/updaterService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,6 +49,9 @@ function createWindow() {
   // Show window smoothly when ready
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+    setTimeout(() => {
+      updaterService.checkForUpdates().catch(() => {});
+    }, 4000);
   });
 
   // Load URL or file

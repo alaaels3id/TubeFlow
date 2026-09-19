@@ -1,10 +1,11 @@
-import { ipcMain, dialog, shell, nativeTheme, BrowserWindow } from 'electron';
+import { ipcMain, dialog, shell, nativeTheme, BrowserWindow, app } from 'electron';
 import { metadataService } from '../services/metadataService';
 import { downloadService } from '../services/downloadService';
 import { storageService } from '../services/storageService';
 import { binaryService } from '../services/binaryService';
 import { showNotification } from '../notifications';
 import { loggerService } from '../services/loggerService';
+import { updaterService } from '../services/updaterService';
 
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   // Wire download callbacks to push to renderer
@@ -144,5 +145,33 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
 
   ipcMain.handle('logger:getPath', async () => {
     return loggerService.getLogFilePath();
+  });
+
+  // App & Updater
+  ipcMain.handle('app:getVersion', () => {
+    return app.getVersion();
+  });
+
+  ipcMain.handle('updater:getStatus', () => {
+    return updaterService.getStatus();
+  });
+
+  ipcMain.handle('updater:check', async () => {
+    return await updaterService.checkForUpdates();
+  });
+
+  ipcMain.handle('updater:download', async () => {
+    return await updaterService.downloadUpdate();
+  });
+
+  ipcMain.handle('updater:install', () => {
+    updaterService.installUpdate();
+  });
+
+  // Forward updater status changes to renderer
+  updaterService.onStatusChange((status) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status-changed', status);
+    }
   });
 }

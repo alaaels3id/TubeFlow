@@ -161,5 +161,22 @@ export const ar = {
     contentUnavailable: 'هذا المحتوى غير متوفر أو يتعذر تنزيله.',
     permissionError: 'لا تتوفر صلاحيات للكتابة في مجلد التنزيل المحدد.',
     generic: 'حدث خطأ غير متوقع أثناء معالجة الطلب.'
+  },
+  updater: {
+    title: 'تحديثات التطبيق',
+    currentVersion: 'الإصدار الحالي: v{{version}}',
+    checkForUpdates: 'التحقق من وجود تحديثات',
+    checking: 'جاري التحقق من التحديثات...',
+    upToDate: 'تطبيق TubeFlow محدث لآخر إصدار (v{{version}})',
+    updateAvailable: 'يتوفر إصدار جديد: v{{version}}',
+    downloadUpdate: 'تنزيل التحديث',
+    downloading: 'جاري تنزيل التحديث... ({{percent}}%)',
+    updateDownloaded: 'التحديث جاهز للتثبيت!',
+    installAndRestart: 'إعادة التشغيل وتثبيت التحديث',
+    releaseNotes: 'ملاحظات الإصدار',
+    updateFailed: 'تعذر التحقق من التحديث أو تنزيله',
+    speed: 'السرعة: {{speed}}',
+    macInstallNotice: 'سيتم استبدال الإصدار القديم بالإصدار الجديد وإعادة تشغيل التطبيق تلقائياً.'
   }
 };
+

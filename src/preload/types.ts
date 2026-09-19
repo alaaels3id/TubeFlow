@@ -3,7 +3,8 @@ import {
   AppSettings,
   DownloadJob,
   HistoryItem,
-  SystemDependencies
+  SystemDependencies,
+  UpdateStatus
 } from '../shared/types';
 
 export interface ElectronAPI {
@@ -67,6 +68,16 @@ export interface ElectronAPI {
     openFolder: () => Promise<boolean>;
     getRecentLogs: (lines?: number) => Promise<string>;
     getPath: () => Promise<string>;
+  };
+
+  // App & Updater
+  getAppVersion: () => Promise<string>;
+  updater: {
+    getStatus: () => Promise<UpdateStatus>;
+    checkForUpdates: () => Promise<UpdateStatus>;
+    downloadUpdate: () => Promise<void>;
+    installUpdate: () => Promise<void>;
+    onStatusChange: (callback: (status: UpdateStatus) => void) => () => void;
   };
 }
 

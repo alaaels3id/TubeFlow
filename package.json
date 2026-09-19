@@ -18,6 +18,13 @@
   "build": {
     "appId": "com.tubeflow.desktop",
     "productName": "TubeFlow",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "alaaels3id",
+        "repo": "TubeFlow"
+      }
+    ],
     "directories": {
       "output": "release"
     },
@@ -59,6 +66,7 @@
     }
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "lucide-react": "^1.16.0",
     "node-notifier": "^10.0.1",
     "react": "^18.3.1",

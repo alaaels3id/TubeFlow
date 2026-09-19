@@ -11,6 +11,7 @@ import { useAppStore } from './stores/useAppStore';
 import { useSettingsStore } from './stores/useSettingsStore';
 import { useQueueStore } from './stores/useQueueStore';
 import { useHistoryStore } from './stores/useHistoryStore';
+import { useUpdaterStore } from './stores/useUpdaterStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 export const App: React.FC = () => {
@@ -18,6 +19,7 @@ export const App: React.FC = () => {
   const loadSettings = useSettingsStore((state) => state.loadSettings);
   const initQueueListeners = useQueueStore((state) => state.initListeners);
   const loadHistory = useHistoryStore((state) => state.loadHistory);
+  const initUpdaterListeners = useUpdaterStore((state) => state.initListeners);
 
   useKeyboardShortcuts();
 
@@ -25,7 +27,8 @@ export const App: React.FC = () => {
     loadSettings();
     initQueueListeners();
     loadHistory();
-  }, [loadSettings, initQueueListeners, loadHistory]);
+    initUpdaterListeners();
+  }, [loadSettings, initQueueListeners, loadHistory, initUpdaterListeners]);
 
   return (
     <div className="app-shell">

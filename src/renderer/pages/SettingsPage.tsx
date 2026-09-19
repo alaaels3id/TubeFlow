@@ -11,11 +11,17 @@ import {
   ShieldCheck,
   Type,
   FileText,
-  ExternalLink
+  ExternalLink,
+  ArrowUpCircle,
+  RefreshCw,
+  DownloadCloud,
+  Sparkles
 } from 'lucide-react';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { useAppStore } from '../stores/useAppStore';
+import { useUpdaterStore } from '../stores/useUpdaterStore';
 import { useI18n } from '../hooks/useI18n';
+import { formatBytes } from '../utils/format';
 import { ThemeMode, FontSize, Language, DuplicateAction } from '@shared/types';
 
 import { Logo } from '../components/common/Logo';
@@ -28,6 +34,19 @@ export const SettingsPage: React.FC = () => {
     dependencies,
     loadDependencies
   } = useSettingsStore();
+
+  const {
+    currentVersion,
+    state: updaterState,
+    updateInfo,
+    progress: updateProgress,
+    error: updaterError,
+    isChecking,
+    isDownloading,
+    checkForUpdates,
+    downloadUpdate,
+    installUpdate
+  } = useUpdaterStore();
 
   const { addToast } = useAppStore();
   const { t } = useI18n();
@@ -471,6 +490,170 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 6. Application Updates */}
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ArrowUpCircle size={20} color="var(--color-primary-500)" />
+            <h3 style={{ fontSize: 'var(--font-size-md)', fontWeight: 700 }}>
+              {t('updater.title')}
+            </h3>
+          </div>
+          <span className="badge badge-info" style={{ fontSize: '12px' }}>
+            v{currentVersion}
+          </span>
+        </div>
+
+        <div
+          style={{
+            padding: 16,
+            backgroundColor: 'var(--bg-input)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {updaterState === 'downloaded' ? (
+                  <>
+                    <CheckCircle2 size={16} color="var(--color-success, #10b981)" />
+                    <span style={{ color: 'var(--color-success, #10b981)' }}>{t('updater.updateDownloaded')}</span>
+                  </>
+                ) : updaterState === 'available' ? (
+                  <>
+                    <Sparkles size={16} color="var(--color-primary-500)" />
+                    <span style={{ color: 'var(--text-primary)' }}>
+                      {t('updater.updateAvailable', { version: updateInfo?.version || '' })}
+                    </span>
+                  </>
+                ) : updaterState === 'checking' ? (
+                  <>
+                    <RefreshCw size={15} className="animate-spin" color="var(--color-primary-500)" />
+                    <span>{t('updater.checking')}</span>
+                  </>
+                ) : updaterState === 'downloading' ? (
+                  <>
+                    <DownloadCloud size={16} className="animate-pulse" color="var(--color-primary-500)" />
+                    <span>{t('updater.downloading', { percent: updateProgress?.percent || 0 })}</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} color="var(--color-success, #10b981)" />
+                    <span>{t('updater.upToDate', { version: currentVersion })}</span>
+                  </>
+                )}
+              </div>
+
+              {updaterState === 'downloaded' && (
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', marginTop: 4 }}>
+                  {t('updater.macInstallNotice')}
+                </div>
+              )}
+
+              {updaterError && (
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-danger, #ef4444)', marginTop: 4 }}>
+                  {updaterError}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {updaterState === 'downloaded' ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={installUpdate}
+                  style={{ height: 34, fontSize: 'var(--font-size-xs)' }}
+                >
+                  <RefreshCw size={14} />
+                  <span>{t('updater.installAndRestart')}</span>
+                </button>
+              ) : updaterState === 'available' ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={downloadUpdate}
+                  disabled={isDownloading}
+                  style={{ height: 34, fontSize: 'var(--font-size-xs)' }}
+                >
+                  <DownloadCloud size={14} />
+                  <span>{t('updater.downloadUpdate')}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={checkForUpdates}
+                  disabled={isChecking}
+                  style={{ height: 34, fontSize: 'var(--font-size-xs)' }}
+                >
+                  <RefreshCw size={14} className={isChecking ? 'animate-spin' : ''} />
+                  <span>{isChecking ? t('updater.checking') : t('updater.checkForUpdates')}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Progress bar while downloading */}
+          {updaterState === 'downloading' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+              <div
+                style={{
+                  height: 6,
+                  width: '100%',
+                  backgroundColor: 'var(--border-subtle)',
+                  borderRadius: 3,
+                  overflow: 'hidden'
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${updateProgress?.percent || 0}%`,
+                    backgroundColor: 'var(--color-primary-500)',
+                    transition: 'width 0.3s ease'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
+                <span>{updateProgress?.percent || 0}%</span>
+                <span>
+                  {formatBytes(updateProgress?.transferred || 0)} / {formatBytes(updateProgress?.total || 0)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Release Notes preview */}
+          {updateInfo?.releaseNotes && (
+            <div
+              style={{
+                marginTop: 8,
+                padding: 10,
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: 'var(--font-size-xs)',
+                color: 'var(--text-secondary)',
+                maxHeight: 120,
+                overflowY: 'auto'
+              }}
+            >
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+                {t('updater.releaseNotes')} ({updateInfo.version}):
+              </div>
+              <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                {updateInfo.releaseNotes}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Legal notice */}
         <div
@@ -489,7 +672,7 @@ export const SettingsPage: React.FC = () => {
         >
           <ShieldCheck size={18} color="var(--color-primary-500)" style={{ flexShrink: 0, marginTop: 1 }} />
           <div>
-            <strong>TubeFlow v1.0.0</strong> — {t('app.disclaimer')}
+            <strong>TubeFlow v{currentVersion}</strong> — {t('app.disclaimer')}
           </div>
         </div>
       </div>

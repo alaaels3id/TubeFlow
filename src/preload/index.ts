@@ -71,6 +71,22 @@ const api: ElectronAPI = {
     openFolder: () => ipcRenderer.invoke('logger:openFolder'),
     getRecentLogs: (lines?: number) => ipcRenderer.invoke('logger:getRecent', lines),
     getPath: () => ipcRenderer.invoke('logger:getPath')
+  },
+
+  // App & Updater
+  getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  updater: {
+    getStatus: () => ipcRenderer.invoke('updater:getStatus'),
+    checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+    downloadUpdate: () => ipcRenderer.invoke('updater:download'),
+    installUpdate: () => ipcRenderer.invoke('updater:install'),
+    onStatusChange: (callback: (status: any) => void) => {
+      const listener = (_event: any, status: any) => callback(status);
+      ipcRenderer.on('updater:status-changed', listener);
+      return () => {
+        ipcRenderer.removeListener('updater:status-changed', listener);
+      };
+    }
   }
 };
 

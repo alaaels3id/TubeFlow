@@ -136,3 +136,34 @@ export interface AnalyzeResult {
   video?: VideoMetadata;
   playlist?: PlaylistMetadata;
 }
+
+export type UpdateState =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+export interface UpdateInfo {
+  version: string;
+  releaseDate?: string;
+  releaseNotes?: string;
+  releaseName?: string;
+}
+
+export interface UpdateProgress {
+  percent: number;
+  bytesPerSecond: number;
+  transferred: number;
+  total: number;
+}
+
+export interface UpdateStatus {
+  state: UpdateState;
+  currentVersion: string;
+  updateInfo?: UpdateInfo | null;
+  progress?: UpdateProgress | null;
+  error?: string | null;
+}

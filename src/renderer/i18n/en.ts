@@ -161,5 +161,22 @@ export const en = {
     contentUnavailable: 'This content is unavailable or cannot be downloaded.',
     permissionError: 'Cannot write to the selected download folder. Please check permissions.',
     generic: 'Something went wrong while processing this request.'
+  },
+  updater: {
+    title: 'Application Updates',
+    currentVersion: 'Current Version: v{{version}}',
+    checkForUpdates: 'Check for Updates',
+    checking: 'Checking for updates...',
+    upToDate: 'TubeFlow is up to date (v{{version}})',
+    updateAvailable: 'New version available: v{{version}}',
+    downloadUpdate: 'Download Update',
+    downloading: 'Downloading update... ({{percent}}%)',
+    updateDownloaded: 'Update ready to install!',
+    installAndRestart: 'Restart & Install Update',
+    releaseNotes: 'Release Notes',
+    updateFailed: 'Failed to check or download update',
+    speed: 'Speed: {{speed}}',
+    macInstallNotice: 'The update will replace the old version and restart automatically.'
   }
 };
+
