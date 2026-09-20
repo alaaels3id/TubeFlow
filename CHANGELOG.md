@@ -5,6 +5,22 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-09-20
+
+### ✨ Features & Improvements
+
+#### 🔔 Native Upgrade Desktop Notifications
+- **Automated Version Alerts**: Delivers a native desktop notification whenever a new version is released and ready to upgrade, localized in both English and Arabic.
+- **Interactive Click-to-Focus**: Clicking the notification automatically brings TubeFlow to the foreground and focuses the window for immediate upgrading.
+- **Continuous Background Monitoring**: Checks for updates on startup and runs unobtrusive checks every 2 hours in the background.
+- **Deduplication Safeguard**: Prevents duplicate notification spam for the same release version.
+
+#### 📝 Rich Formatted Release Notes Rendering
+- **HTML & Markdown Support**: Seamlessly renders release notes with styled typography, headers, emojis, and bullet lists, eliminating raw escaped HTML tags (`<h3>`, `<ul>`, `<li>`).
+- **Sanitized Presentation**: Safely strips untrusted attributes while preserving structured release documentation inside Settings.
+
+---
+
 ## [1.4.0] - 2026-09-20
 
 ### ✨ Features & Improvements
