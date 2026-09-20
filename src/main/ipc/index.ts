@@ -44,12 +44,24 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     return downloadService.pauseDownload(id);
   });
 
+  ipcMain.handle('download:pauseAll', async () => {
+    return downloadService.pauseAll();
+  });
+
   ipcMain.handle('download:resume', async (_event, id: string) => {
     return downloadService.resumeDownload(id);
   });
 
+  ipcMain.handle('download:resumeAll', async () => {
+    return downloadService.resumeAll();
+  });
+
   ipcMain.handle('download:cancel', async (_event, id: string) => {
     return downloadService.cancelDownload(id);
+  });
+
+  ipcMain.handle('download:stopAll', async () => {
+    return downloadService.stopAll();
   });
 
   ipcMain.handle('download:retry', async (_event, id: string) => {
@@ -58,6 +70,10 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
 
   ipcMain.handle('download:remove', async (_event, id: string) => {
     return downloadService.removeDownload(id);
+  });
+
+  ipcMain.handle('download:getQueue', async () => {
+    return downloadService.getQueue();
   });
 
   ipcMain.handle('download:sortQueue', async (_event, order: 'asc' | 'desc') => {

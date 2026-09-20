@@ -23,12 +23,19 @@ export interface ElectronAPI {
     destination?: string;
     playlistId?: string;
     playlistTitle?: string;
+    playlistIndex?: number;
+    filesizeApprox?: number;
+    totalBytes?: number;
   }) => Promise<string>; // returns jobId
   pauseDownload: (id: string) => Promise<boolean>;
+  pauseAll: () => Promise<boolean>;
   resumeDownload: (id: string) => Promise<boolean>;
+  resumeAll: () => Promise<boolean>;
   cancelDownload: (id: string) => Promise<boolean>;
+  stopAll: () => Promise<boolean>;
   retryDownload: (id: string) => Promise<boolean>;
   removeDownload: (id: string) => Promise<boolean>;
+  getQueue: () => Promise<DownloadJob[]>;
   sortQueue: (order: 'asc' | 'desc') => Promise<DownloadJob[]>;
   openFile: (filePath: string) => Promise<boolean>;
   openFolder: (filePath: string) => Promise<boolean>;

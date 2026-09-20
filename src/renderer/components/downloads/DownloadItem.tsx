@@ -41,6 +41,8 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
   else if (isFailed) badgeClass = 'badge-error';
   else if (isPaused) badgeClass = 'badge-warning';
 
+  const effectiveTotal = job.totalBytes || job.filesizeApprox || 0;
+
   return (
     <div className="card" style={{ padding: 16 }}>
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -52,8 +54,8 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
             borderRadius: 'var(--radius-sm)',
             overflow: 'hidden',
             backgroundColor: 'var(--bg-input)',
-            flexShrink: 0,
-            position: 'relative'
+            position: 'relative',
+            flexShrink: 0
           }}
         >
           {job.thumbnail ? (
@@ -76,17 +78,19 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
               <HardDrive size={24} />
             </div>
           )}
+
+          {/* Type Badge */}
           <span
             style={{
               position: 'absolute',
-              top: 4,
-              insetInlineStart: 4,
-              backgroundColor: 'rgba(0, 0, 0, 0.75)',
-              color: '#fff',
-              fontSize: 10,
+              bottom: 4,
+              insetInlineEnd: 4,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              color: '#ffffff',
               padding: '1px 4px',
-              borderRadius: 3,
-              fontWeight: 600,
+              borderRadius: 'var(--radius-sm)',
+              fontSize: 9,
+              fontWeight: 700,
               textTransform: 'uppercase'
             }}
           >
@@ -145,9 +149,11 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <span>
                 {job.progress}%
-                {job.totalBytes > 0 && (
-                  <span style={{ marginInlineStart: 4 }}>
-                    ({formatBytes(job.downloadedBytes)} / {formatBytes(job.totalBytes)})
+                {effectiveTotal > 0 && (
+                  <span style={{ marginInlineStart: 6, color: 'var(--text-secondary)' }}>
+                    {job.downloadedBytes > 0
+                      ? `(${formatBytes(job.downloadedBytes)} / ${formatBytes(effectiveTotal)})`
+                      : `• ~${formatBytes(effectiveTotal)}`}
                   </span>
                 )}
               </span>
@@ -176,6 +182,23 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
               {job.quality && (
                 <span className="badge badge-neutral" style={{ padding: '1px 6px', fontSize: 10 }}>
                   {job.quality}
+                </span>
+              )}
+
+              {effectiveTotal > 0 && (
+                <span
+                  className="badge badge-neutral"
+                  style={{
+                    padding: '1px 6px',
+                    fontSize: 10,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3
+                  }}
+                  title={t('downloads.size')}
+                >
+                  <HardDrive size={10} />
+                  <span>{formatBytes(effectiveTotal)}</span>
                 </span>
               )}
             </div>

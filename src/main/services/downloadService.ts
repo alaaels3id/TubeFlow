@@ -40,6 +40,9 @@ export class DownloadService {
     const others = this.queue.filter((j) => j.status !== 'downloading' && j.status !== 'processing');
 
     others.sort((a, b) => {
+      if (typeof a.playlistIndex === 'number' && typeof b.playlistIndex === 'number') {
+        return order === 'asc' ? a.playlistIndex - b.playlistIndex : b.playlistIndex - a.playlistIndex;
+      }
       const cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
       return order === 'asc' ? cmp : -cmp;
     });
@@ -59,6 +62,9 @@ export class DownloadService {
     destination?: string;
     playlistId?: string;
     playlistTitle?: string;
+    playlistIndex?: number;
+    filesizeApprox?: number;
+    totalBytes?: number;
   }): Promise<string> {
     const settings = storageService.getSettings();
     let destDir = options.destination || settings.downloadDirectory || process.env.HOME || '/tmp';
@@ -106,6 +112,7 @@ export class DownloadService {
     }
 
     const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const totalBytes = options.totalBytes || options.filesizeApprox || 0;
 
     const job: DownloadJob = {
       id: jobId,
@@ -113,6 +120,8 @@ export class DownloadService {
       type: options.type,
       playlistId: options.playlistId,
       playlistTitle: options.playlistTitle,
+      playlistIndex: options.playlistIndex,
+      filesizeApprox: options.filesizeApprox || options.totalBytes,
       title: options.title,
       thumbnail: options.thumbnail,
       channel: options.channel,
@@ -122,7 +131,7 @@ export class DownloadService {
       status: 'pending',
       progress: 0,
       downloadedBytes: 0,
-      totalBytes: 0,
+      totalBytes,
       speed: 0,
       remainingSeconds: 0,
       createdAt: new Date().toISOString()
@@ -171,8 +180,9 @@ export class DownloadService {
     }
 
     // Output template
+    const prefix = job.playlistIndex ? `${String(job.playlistIndex).padStart(2, '0')} - ` : '';
     const filenameTemplate = job.type === 'playlist-item'
-      ? '%(playlist_index&{:02d} - |)s%(title)s.%(ext)s'
+      ? (prefix ? `${prefix}%(title)s.%(ext)s` : '%(playlist_index&{:02d} - |)s%(title)s.%(ext)s')
       : '%(title)s.%(ext)s';
 
     const isAudioOnly =
@@ -558,6 +568,61 @@ export class DownloadService {
   public removeDownload(id: string): boolean {
     this.cancelDownload(id);
     this.queue = this.queue.filter((j) => j.id !== id);
+    return true;
+  }
+
+  public pauseAll(): boolean {
+    for (const [id, active] of this.activeProcesses.entries()) {
+      active.killedIntentional = true;
+      active.process.kill('SIGTERM');
+      active.job.status = 'paused';
+      this.emitProgress(active.job);
+      this.activeProcesses.delete(id);
+    }
+    for (const job of this.queue) {
+      if (job.status === 'pending' || job.status === 'downloading' || job.status === 'processing') {
+        job.status = 'paused';
+        this.emitProgress(job);
+      }
+    }
+    return true;
+  }
+
+  public resumeAll(): boolean {
+    let resumedAny = false;
+    for (const job of this.queue) {
+      if (job.status === 'paused') {
+        job.status = 'pending';
+        job.errorMessage = undefined;
+        this.emitProgress(job);
+        resumedAny = true;
+      }
+    }
+    if (resumedAny) {
+      this.processNextInQueue();
+    }
+    return resumedAny;
+  }
+
+  public stopAll(): boolean {
+    for (const [id, active] of this.activeProcesses.entries()) {
+      active.killedIntentional = true;
+      active.process.kill('SIGKILL');
+      active.job.status = 'cancelled';
+      this.emitProgress(active.job);
+      this.activeProcesses.delete(id);
+    }
+    for (const job of this.queue) {
+      if (
+        job.status === 'pending' ||
+        job.status === 'downloading' ||
+        job.status === 'processing' ||
+        job.status === 'paused'
+      ) {
+        job.status = 'cancelled';
+        this.emitProgress(job);
+      }
+    }
     return true;
   }
 

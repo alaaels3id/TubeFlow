@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Edit2,
   Check,
-  Folder
+  Folder,
+  HardDrive
 } from 'lucide-react';
 import { PlaylistMetadata, PlaylistItem } from '@shared/types';
 import { useSettingsStore } from '../../stores/useSettingsStore';
@@ -20,6 +21,7 @@ import { useQueueStore } from '../../stores/useQueueStore';
 import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { useI18n } from '../../hooks/useI18n';
+import { formatBytes, formatDuration } from '../../utils/format';
 
 interface PlaylistViewProps {
   playlist: PlaylistMetadata;
@@ -87,8 +89,9 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
 
     const items = [...unique];
     items.sort((a, b) => {
-      const cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
-      return sortOrder === 'asc' ? cmp : -cmp;
+      const idxA = typeof a.index === 'number' ? a.index : 0;
+      const idxB = typeof b.index === 'number' ? b.index : 0;
+      return sortOrder === 'asc' ? idxA - idxB : idxB - idxA;
     });
     return items;
   }, [playlist.items, sortOrder]);
@@ -124,6 +127,36 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [playlistTitle, setPlaylistTitle] = useState<string>(playlist.title || 'Playlist');
   const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
+
+  const averageItemDuration = useMemo(() => {
+    const withDuration = playlist.items.filter((i) => i.duration && i.duration > 0);
+    if (withDuration.length === 0) return 240;
+    return withDuration.reduce((acc, i) => acc + i.duration, 0) / withDuration.length;
+  }, [playlist.items]);
+
+  const getItemSize = (item: PlaylistItem, quality = targetQuality, format = targetFormat): number => {
+    const isAudio = quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(format);
+    const dur = item.duration && item.duration > 0 ? item.duration : (item.filesizeApprox ? 0 : averageItemDuration);
+    if (dur <= 0) return item.filesizeApprox || 0;
+
+    if (isAudio) {
+      return Math.round((128 * 1000 / 8) * dur);
+    }
+
+    const bitrateMap: Record<string, number> = {
+      '2160p': 25000,
+      '1440p': 12000,
+      '1080p': 4500,
+      '720p': 2200,
+      '480p': 1000,
+      '360p': 600,
+      best: 4500
+    };
+
+    const rate = bitrateMap[quality] || 2200;
+    const totalRate = rate + 128;
+    return Math.round((totalRate * 1000 / 8) * dur);
+  };
 
   useEffect(() => {
     setPlaylistTitle(playlist.title || 'Playlist');
@@ -166,17 +199,21 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
       if (enqueuedUrls.has(video.url)) continue;
       enqueuedUrls.add(video.url);
 
+      const itemSize = getItemSize(video);
       await addJob({
         url: video.url,
         type: 'playlist-item',
         playlistId: playlist.id,
         playlistTitle: finalTitle,
+        playlistIndex: video.index,
         title: video.title,
         thumbnail: video.thumbnail,
         channel: video.channel || playlist.channel,
         quality: targetQuality,
         format: targetFormat,
-        destination: settings.downloadDirectory
+        destination: settings.downloadDirectory,
+        filesizeApprox: itemSize,
+        totalBytes: itemSize
       });
       enqueuedCount++;
     }
@@ -188,6 +225,36 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
 
   const selectableCount = displayItems.filter((item) => (hideDownloaded ? true : !isItemDownloaded(item))).length;
   const allSelected = selectableCount > 0 && selectedIds.size === selectableCount;
+
+  const totalSelectedSize = useMemo(() => {
+    return displayItems
+      .filter((item) => selectedIds.has(item.id))
+      .reduce((acc, item) => acc + getItemSize(item), 0);
+  }, [displayItems, selectedIds, targetQuality, targetFormat]);
+
+  const totalPlaylistSize = useMemo(() => {
+    return playlist.items.reduce((acc, item) => acc + getItemSize(item), 0);
+  }, [playlist.items, targetQuality, targetFormat]);
+
+  const totalPlaylistDuration = useMemo(() => {
+    return playlist.items.reduce((acc, item) => acc + (item.duration || 0), 0);
+  }, [playlist.items]);
+
+  const totalSelectedDuration = useMemo(() => {
+    return displayItems
+      .filter((item) => selectedIds.has(item.id))
+      .reduce((acc, item) => acc + (item.duration || 0), 0);
+  }, [displayItems, selectedIds]);
+
+  const hasPartialSelection = selectedIds.size < displayItems.length;
+
+  const getTotalSizeForQuality = (quality: string) => {
+    const itemsToCount = selectedIds.size > 0
+      ? displayItems.filter((item) => selectedIds.has(item.id))
+      : displayItems;
+    const bytes = itemsToCount.reduce((acc, item) => acc + getItemSize(item, quality, targetFormat), 0);
+    return bytes > 0 ? ` (~${formatBytes(bytes)})` : '';
+  };
 
   return (
     <div className="card animate-fade-in" style={{ padding: 22 }}>
@@ -246,14 +313,61 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
                   </button>
                 </div>
               )}
-              <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-                {playlist.channel} • {t('playlist.videosCount', { count: displayItems.length })}
+              <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span>{playlist.channel}</span>
+                <span>•</span>
+                <span>
+                  {hasPartialSelection
+                    ? t('playlist.selectedOfTotal', { selected: selectedIds.size, total: displayItems.length })
+                    : t('playlist.videosCount', { count: displayItems.length })}
+                </span>
+                {(totalSelectedSize > 0 || totalPlaylistSize > 0) && (
+                  <>
+                    <span>•</span>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        color: 'var(--color-primary-400)',
+                        fontWeight: 600
+                      }}
+                      title={t('playlist.totalSize')}
+                    >
+                      <HardDrive size={12} />
+                      <span>
+                        {t('playlist.totalSize')}: ~{formatBytes(hasPartialSelection ? totalSelectedSize : totalPlaylistSize)}
+                        {hasPartialSelection && totalPlaylistSize > totalSelectedSize ? (
+                          <span style={{ fontSize: '11px', opacity: 0.75, marginInlineStart: 4, fontWeight: 500 }}>
+                            {t('playlist.allTotalSize', { size: formatBytes(totalPlaylistSize) })}
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                  </>
+                )}
+                {(totalSelectedDuration > 0 || totalPlaylistDuration > 0) && (
+                  <>
+                    <span>•</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title={t('playlist.totalDuration')}>
+                      <Clock size={11} />
+                      <span>
+                        {formatDuration(hasPartialSelection ? totalSelectedDuration : totalPlaylistDuration)}
+                        {hasPartialSelection && totalPlaylistDuration > totalSelectedDuration ? (
+                          <span style={{ fontSize: '11px', opacity: 0.75, marginInlineStart: 4 }}>
+                            {t('playlist.allTotalTime', { time: formatDuration(totalPlaylistDuration) })}
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                  </>
+                )}
                 {downloadedCount > 0 && (
-                  <span style={{ marginInlineStart: 6, color: 'var(--color-success, #10b981)', fontWeight: 500 }}>
+                  <span style={{ marginInlineStart: 4, color: 'var(--color-success, #10b981)', fontWeight: 500 }}>
                     • ({t('playlist.alreadyDownloaded', { count: downloadedCount })})
                   </span>
                 )}
-              </p>
+              </div>
             </div>
           </div>
 
@@ -298,8 +412,13 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
               {allSelected ? <CheckSquare size={15} /> : <Square size={15} />}
               <span>{allSelected ? t('playlist.deselectAll') : t('playlist.selectAll')}</span>
             </button>
-            <span className="badge badge-info">
-              {t('playlist.selectedCount', { count: selectedIds.size })}
+            <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span>{t('playlist.selectedCount', { count: selectedIds.size })}</span>
+              {totalSelectedSize > 0 && (
+                <span style={{ fontWeight: 700, borderInlineStart: '1px solid rgba(255, 255, 255, 0.25)', paddingInlineStart: 6 }}>
+                  ~{formatBytes(totalSelectedSize)}
+                </span>
+              )}
             </span>
           </div>
         </div>
@@ -366,13 +485,13 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
                 value={targetQuality}
                 onChange={(e) => setTargetQuality(e.target.value)}
               >
-                <option value="best">Best Available</option>
-                <option value="2160p">4K (2160p)</option>
-                <option value="1440p">2K (1440p)</option>
-                <option value="1080p">1080p (Full HD)</option>
-                <option value="720p">720p (HD)</option>
-                <option value="480p">480p</option>
-                <option value="audio">Audio Only</option>
+                <option value="best">Best Available{getTotalSizeForQuality('best')}</option>
+                <option value="2160p">4K (2160p){getTotalSizeForQuality('2160p')}</option>
+                <option value="1440p">2K (1440p){getTotalSizeForQuality('1440p')}</option>
+                <option value="1080p">1080p (Full HD){getTotalSizeForQuality('1080p')}</option>
+                <option value="720p">720p (HD){getTotalSizeForQuality('720p')}</option>
+                <option value="480p">480p{getTotalSizeForQuality('480p')}</option>
+                <option value="audio">Audio Only{getTotalSizeForQuality('audio')}</option>
               </select>
             </div>
 
@@ -394,6 +513,34 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
               </select>
             </div>
 
+            {totalSelectedSize > 0 && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  backgroundColor: 'rgba(178, 58, 72, 0.12)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(178, 58, 72, 0.25)',
+                  fontSize: 'var(--font-size-xs)',
+                  color: 'var(--text-secondary)'
+                }}
+                title={t('playlist.totalSize')}
+              >
+                <HardDrive size={13} color="var(--color-primary-500)" />
+                <span>{t('playlist.totalSize')}:</span>
+                <strong style={{ color: 'var(--color-primary-400)', fontWeight: 700 }}>
+                  ~{formatBytes(totalSelectedSize)}
+                </strong>
+                {selectedIds.size < playlist.items.length && totalPlaylistSize > totalSelectedSize && (
+                  <span style={{ fontSize: '11px', opacity: 0.8 }}>
+                    {t('playlist.allTotalSize', { size: formatBytes(totalPlaylistSize) })}
+                  </span>
+                )}
+              </div>
+            )}
+
             <button
               className="btn btn-primary"
               onClick={handleDownloadSelected}
@@ -401,7 +548,10 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
               style={{ height: 32, fontSize: 'var(--font-size-xs)' }}
             >
               <Download size={14} />
-              <span>{t('playlist.downloadSelected', { count: selectedIds.size })}</span>
+              <span>
+                {t('playlist.downloadSelected', { count: selectedIds.size })}
+                {totalSelectedSize > 0 ? ` (~${formatBytes(totalSelectedSize)})` : ''}
+              </span>
             </button>
           </div>
         </div>
@@ -466,7 +616,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
                       textAlign: 'center'
                     }}
                   >
-                    {sortOrder === 'default' ? item.index : displayIdx + 1}
+                    {item.index ?? (displayIdx + 1)}
                   </span>
 
                   {item.thumbnail && (
@@ -517,17 +667,34 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlist }) => {
                     </span>
                   )}
 
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--text-muted)'
-                    }}
-                  >
-                    <Clock size={12} />
-                    <span>{item.durationString}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                    {getItemSize(item) > 0 && (
+                      <span
+                        style={{
+                          fontSize: 'var(--font-size-xs)',
+                          color: 'var(--text-secondary)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}
+                      >
+                        <HardDrive size={12} color="var(--color-primary-500)" />
+                        <span>~{formatBytes(getItemSize(item))}</span>
+                      </span>
+                    )}
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 'var(--font-size-xs)',
+                        color: 'var(--text-muted)'
+                      }}
+                    >
+                      <Clock size={12} />
+                      <span>{item.durationString}</span>
+                    </div>
                   </div>
                 </div>
               );

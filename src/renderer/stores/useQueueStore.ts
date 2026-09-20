@@ -18,10 +18,16 @@ interface QueueStore {
     destination?: string;
     playlistId?: string;
     playlistTitle?: string;
+    playlistIndex?: number;
+    filesizeApprox?: number;
+    totalBytes?: number;
   }) => Promise<string | null>;
   pauseJob: (id: string) => Promise<void>;
+  pauseAll: () => Promise<void>;
   resumeJob: (id: string) => Promise<void>;
+  resumeAll: () => Promise<void>;
   cancelJob: (id: string) => Promise<void>;
+  stopAll: () => Promise<void>;
   retryJob: (id: string) => Promise<void>;
   removeJob: (id: string) => Promise<void>;
   sortQueue: (order?: 'asc' | 'desc') => Promise<void>;
@@ -53,7 +59,7 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
             downloadedBytes: safeDownloaded
           };
         } else {
-          newJobs = [updatedJob, ...state.jobs];
+          newJobs = [...state.jobs, updatedJob];
         }
 
         const activeCount = newJobs.filter(
@@ -109,6 +115,17 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
         .addToast(`Failed: ${failedJob.title} (${failedJob.errorMessage || 'Error'})`, 'error');
     });
 
+    if (window.api && window.api.getQueue) {
+      window.api.getQueue().then((initialJobs) => {
+        if (Array.isArray(initialJobs) && initialJobs.length > 0) {
+          set({
+            jobs: initialJobs,
+            activeCount: initialJobs.filter((j) => j.status === 'downloading' || j.status === 'processing').length
+          });
+        }
+      }).catch(console.error);
+    }
+
     set({ initialized: true });
   },
 
@@ -136,6 +153,16 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
     }
   },
 
+  pauseAll: async () => {
+    try {
+      if (window.api && window.api.pauseAll) {
+        await window.api.pauseAll();
+      }
+    } catch (e) {
+      console.error('Failed to pause all jobs:', e);
+    }
+  },
+
   resumeJob: async (id) => {
     try {
       if (window.api && window.api.resumeDownload) {
@@ -146,6 +173,16 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
     }
   },
 
+  resumeAll: async () => {
+    try {
+      if (window.api && window.api.resumeAll) {
+        await window.api.resumeAll();
+      }
+    } catch (e) {
+      console.error('Failed to resume all jobs:', e);
+    }
+  },
+
   cancelJob: async (id) => {
     try {
       if (window.api && window.api.cancelDownload) {
@@ -153,6 +190,16 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
       }
     } catch (e) {
       console.error('Failed to cancel job:', e);
+    }
+  },
+
+  stopAll: async () => {
+    try {
+      if (window.api && window.api.stopAll) {
+        await window.api.stopAll();
+      }
+    } catch (e) {
+      console.error('Failed to stop all jobs:', e);
     }
   },
 
@@ -192,6 +239,9 @@ export const useQueueStore = create<QueueStore>((set, get) => ({
           const active = state.jobs.filter((j) => j.status === 'downloading' || j.status === 'processing');
           const others = state.jobs.filter((j) => j.status !== 'downloading' && j.status !== 'processing');
           others.sort((a, b) => {
+            if (typeof a.playlistIndex === 'number' && typeof b.playlistIndex === 'number') {
+              return order === 'asc' ? a.playlistIndex - b.playlistIndex : b.playlistIndex - a.playlistIndex;
+            }
             const cmp = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
             return order === 'asc' ? cmp : -cmp;
           });

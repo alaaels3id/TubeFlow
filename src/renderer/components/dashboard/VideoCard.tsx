@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Download, Folder, User, Clock, CheckCircle2, Film } from 'lucide-react';
+import { Download, Folder, User, Clock, CheckCircle2, Film, HardDrive } from 'lucide-react';
 import { VideoMetadata } from '@shared/types';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { useQueueStore } from '../../stores/useQueueStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { useI18n } from '../../hooks/useI18n';
+import { formatBytes } from '../../utils/format';
 
 interface VideoCardProps {
   video: VideoMetadata;
@@ -40,7 +41,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
         channel: video.channel,
         quality: selectedQuality,
         format: selectedFormat,
-        destination: settings.downloadDirectory
+        destination: settings.downloadDirectory,
+        filesizeApprox: currentSize,
+        totalBytes: currentSize
       });
 
       if (jobId) {
@@ -57,6 +60,18 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
   };
 
   const isAudioOnly = selectedQuality === 'audio' || ['mp3', 'm4a', 'opus'].includes(selectedFormat);
+
+  const getSizeForResolution = (res: string): number => {
+    if (res === 'audio' || isAudioOnly) {
+      const audioFmt = video.formats.find((f) => f.resolution === 'audio');
+      if (audioFmt?.filesizeApprox) return audioFmt.filesizeApprox;
+      return video.duration ? Math.round((128 * 1000 / 8) * video.duration) : 0;
+    }
+    const fmt = video.formats.find((f) => f.resolution === res);
+    return fmt?.filesizeApprox || 0;
+  };
+
+  const currentSize = getSizeForResolution(selectedQuality);
 
   return (
     <div className="card animate-fade-in" style={{ padding: 22 }}>
@@ -132,7 +147,29 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
           {/* Quality & Format Selection Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
             <div className="input-group">
-              <label className="input-label">{t('videoCard.quality')}</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <label className="input-label" style={{ marginBottom: 0 }}>{t('videoCard.quality')}</label>
+                {currentSize > 0 && (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: 'var(--color-primary-400)',
+                      backgroundColor: 'rgba(178, 58, 72, 0.12)',
+                      border: '1px solid rgba(178, 58, 72, 0.25)',
+                      padding: '1px 7px',
+                      borderRadius: 'var(--radius-sm)',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    title={t('videoCard.approxSize')}
+                  >
+                    <HardDrive size={11} />
+                    <span>~{formatBytes(currentSize)}</span>
+                  </span>
+                )}
+              </div>
               <select
                 className="select-control"
                 value={selectedQuality}
@@ -144,9 +181,11 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
                   }
                 }}
               >
-                {video.availableResolutions.map((res) => (
-                  <option key={res} value={res}>
-                    {res === 'audio'
+                {video.availableResolutions.map((res) => {
+                  const size = getSizeForResolution(res);
+                  const sizeText = size > 0 ? ` • ~${formatBytes(size)}` : '';
+                  const label =
+                    res === 'audio'
                       ? t('videoCard.audioOnly')
                       : res === '2160p'
                       ? '4K (2160p)'
@@ -156,14 +195,18 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
                       ? '1080p (Full HD)'
                       : res === '720p'
                       ? '720p (HD)'
-                      : res}
-                  </option>
-                ))}
+                      : res;
+                  return (
+                    <option key={res} value={res}>
+                      {label}{sizeText}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
             <div className="input-group">
-              <label className="input-label">{t('videoCard.format')}</label>
+              <label className="input-label" style={{ marginBottom: 4 }}>{t('videoCard.format')}</label>
               <select
                 className="select-control"
                 value={selectedFormat}
@@ -225,8 +268,28 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
             </button>
           </div>
 
-          {/* Download Action */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>
+          {/* Download Action & Current Size */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, flexWrap: 'wrap', gap: 10 }}>
+            {currentSize > 0 ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: 'var(--text-secondary)',
+                  fontSize: 'var(--font-size-sm)'
+                }}
+              >
+                <HardDrive size={15} color="var(--color-primary-500)" />
+                <span>{t('videoCard.approxSize')}:</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
+                  ~{formatBytes(currentSize)}
+                </span>
+              </div>
+            ) : (
+              <div />
+            )}
+
             <button
               className="btn btn-primary"
               onClick={handleDownload}

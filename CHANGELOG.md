@@ -5,6 +5,30 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-09-20
+
+### ✨ Features & Improvements
+
+#### ⏯️ Bulk Queue Controls (Pause All, Resume All, Stop All)
+- **Comprehensive Queue Actions**: Added dedicated toolbar actions in the Downloads Queue to pause, resume, or cancel all active and pending downloads in a single click.
+- **Dynamic Action Visibility**: Intelligently toggles between "Pause All" and "Resume All" based on queue state, with safeguards and instant visual updates across all download cards.
+- **Bilingual Support**: Fully localized action buttons in both English and Arabic.
+
+#### 🔢 Chronological Playlist Ordering (Old to New)
+- **Sequential Top-to-Bottom Downloads**: Playlists are now ordered chronologically (1 → N) starting from the oldest video at the top down to the newest at the bottom.
+- **Preserved Sequential Queueing**: Jobs in the queue maintain this top-to-bottom order without reversing or reshuffling upon progress updates.
+- **Numbered Disk Files**: Output filenames in playlist folders are automatically prefixed with zero-padded playlist indices (e.g. `01 - Video Title.mp4`), preserving intended playback order in all media players and file managers.
+
+#### 🧮 Real-Time File Size Estimations & Dynamic Calculations
+- **Combined DASH Streams**: Merges separate video and audio stream bitrates to provide realistic and accurate file size calculations before and during downloads.
+- **Quality Selector Size Badges**: Displays estimated file sizes directly beside each resolution option in the dropdown (e.g. `1080p (Full HD) • ~56.9 MB`) and as a badge beside the quality label.
+- **Download Item Size Badges**: Each download queue card displays a dedicated size badge alongside its resolution badge (e.g. `[ 720p ] [ 56.9 MB ]`) and accurate progress sizes (`24% (13.6 MB / 56.9 MB)`).
+
+#### ⏱️ Real-Time Playlist Recalculation on Selection Change
+- **Dynamic Subtitle Stats**: Deselecting or selecting videos dynamically recalculates both **Total Size** and **Total Time** across the playlist header, action badge, toolbar pill, and download button.
+- **Dual-State Overview**: Clearly distinguishes between active selection totals and overall playlist totals (e.g. `8 of 9 videos • Total Size: ~2.9 GB (all: ~3.3 GB) • 1:30:34 (all: 1:40:43)`).
+- **Resolution-Wide Playlist Size Previews**: Every quality option in the playlist dropdown details the total download size for the entire selection at that specific resolution.
+
 ---
 
 ## [1.3.1] - 2026-09-19

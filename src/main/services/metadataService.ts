@@ -92,8 +92,23 @@ export class MetadataService {
 
         try {
           const data = JSON.parse(stdout);
+          const duration = Math.round(data.duration || 0);
           const rawFormats = Array.isArray(data.formats) ? data.formats : [];
-          
+
+          // Find best audio stream size to add to video-only streams or for audio downloads
+          let bestAudioSize = 0;
+          for (const f of rawFormats) {
+            if ((!f.vcodec || f.vcodec === 'none') && f.acodec && f.acodec !== 'none') {
+              const sz = f.filesize || f.filesize_approx || (f.tbr || f.abr ? Math.round(((f.tbr || f.abr) * 1000 / 8) * duration) : 0);
+              if (sz > bestAudioSize) {
+                bestAudioSize = sz;
+              }
+            }
+          }
+          if (!bestAudioSize && duration > 0) {
+            bestAudioSize = Math.round((128 * 1000 / 8) * duration);
+          }
+
           // Map and deduce unique resolutions
           const resMap = new Map<string, FormatOption>();
           const standardHeights = [2160, 1440, 1080, 720, 480, 360];
@@ -102,37 +117,68 @@ export class MetadataService {
             const height = f.height || 0;
             if (height && standardHeights.includes(height)) {
               const resTag = `${height}p`;
-              if (!resMap.has(resTag) || (f.filesize || f.filesize_approx)) {
+              let size = f.filesize || f.filesize_approx;
+              if (!size && (f.tbr || f.vbr) && duration > 0) {
+                size = Math.round(((f.tbr || f.vbr) * 1000 / 8) * duration);
+              }
+              const hasAudio = !!f.acodec && f.acodec !== 'none';
+              const totalSize = size ? (hasAudio ? size : size + bestAudioSize) : undefined;
+
+              const existing = resMap.get(resTag);
+              if (!existing || (totalSize && (!existing.filesizeApprox || f.ext === 'mp4'))) {
                 resMap.set(resTag, {
                   formatId: f.format_id,
                   resolution: resTag,
                   extension: (f.ext === 'webm' ? 'webm' : 'mp4'),
                   hasVideo: true,
-                  hasAudio: !!f.acodec && f.acodec !== 'none',
-                  filesizeApprox: f.filesize || f.filesize_approx,
+                  hasAudio: hasAudio,
+                  filesizeApprox: totalSize,
                   fps: f.fps
                 });
               }
             }
           }
 
-          // If no standard heights found, fallback to common defaults that YouTube usually provides
+          // Fallback resolutions if none found
           if (resMap.size === 0) {
-            resMap.set('1080p', { formatId: 'best', resolution: '1080p', extension: 'mp4', hasVideo: true, hasAudio: true });
-            resMap.set('720p', { formatId: 'best', resolution: '720p', extension: 'mp4', hasVideo: true, hasAudio: true });
-            resMap.set('360p', { formatId: 'best', resolution: '360p', extension: 'mp4', hasVideo: true, hasAudio: true });
+            resMap.set('1080p', { formatId: 'best', resolution: '1080p', extension: 'mp4', hasVideo: true, hasAudio: true, filesizeApprox: duration ? Math.round((4500 * 1000 / 8) * duration) : undefined });
+            resMap.set('720p', { formatId: 'best', resolution: '720p', extension: 'mp4', hasVideo: true, hasAudio: true, filesizeApprox: duration ? Math.round((2200 * 1000 / 8) * duration) : undefined });
+            resMap.set('360p', { formatId: 'best', resolution: '360p', extension: 'mp4', hasVideo: true, hasAudio: true, filesizeApprox: duration ? Math.round((600 * 1000 / 8) * duration) : undefined });
           }
 
-          const availableResolutions = Array.from(resMap.keys()).sort((a, b) => {
+          // Fill in any resolution with estimated size if missing
+          const defaultBitrates: Record<string, number> = {
+            '2160p': 25000,
+            '1440p': 12000,
+            '1080p': 4500,
+            '720p': 2200,
+            '480p': 1000,
+            '360p': 600
+          };
+          for (const [resTag, opt] of resMap.entries()) {
+            if (!opt.filesizeApprox && duration > 0 && defaultBitrates[resTag]) {
+              opt.filesizeApprox = Math.round((defaultBitrates[resTag] * 1000 / 8) * duration) + bestAudioSize;
+            }
+          }
+
+          // Add audio format option
+          resMap.set('audio', {
+            formatId: 'bestaudio',
+            resolution: 'audio',
+            extension: 'mp3',
+            hasVideo: false,
+            hasAudio: true,
+            filesizeApprox: bestAudioSize
+          });
+
+          const availableResolutions = Array.from(resMap.keys()).filter((r) => r !== 'audio').sort((a, b) => {
             const numA = parseInt(a, 10) || 0;
             const numB = parseInt(b, 10) || 0;
             return numB - numA;
           });
 
-          // Also include 'audio' resolution
+          // Also include 'audio' resolution at the end
           availableResolutions.push('audio');
-
-          const duration = Math.round(data.duration || 0);
 
           const video: VideoMetadata = {
             id: data.id || 'video',
@@ -234,6 +280,7 @@ export class MetadataService {
 
           const items: PlaylistItem[] = uniqueEntries.map((e: any, index: number) => {
             const dur = Math.round(e.duration || 0);
+            const size = e.filesize || e.filesize_approx || (e.tbr && dur > 0 ? Math.round((e.tbr * 1000 / 8) * dur) : undefined);
             return {
               id: e.id || `item-${index + 1}`,
               url: e.url ? (e.url.startsWith('http') ? e.url : `https://www.youtube.com/watch?v=${e.id}`) : url,
@@ -243,7 +290,8 @@ export class MetadataService {
               duration: dur,
               durationString: formatDuration(dur),
               index: index + 1,
-              selected: true
+              selected: true,
+              filesizeApprox: size
             };
           });
 
@@ -290,6 +338,12 @@ export class MetadataService {
             resolvedTitle = 'YouTube Playlist';
           }
 
+          const totalDuration = items.reduce((acc, item) => acc + (item.duration || 0), 0);
+          // Default estimation using standard 1080p (4500kbps video + 128kbps audio = ~4628kbps)
+          const estimatedTotalSize = totalDuration > 0
+            ? Math.round(((4500 + 128) * 1000 / 8) * totalDuration)
+            : items.reduce((acc, item) => acc + (item.filesizeApprox || 0), 0);
+
           const playlist: PlaylistMetadata = {
             id: data.id || 'playlist',
             url: data.webpage_url || url,
@@ -297,7 +351,10 @@ export class MetadataService {
             thumbnail: data.thumbnail || (items[0] ? items[0].thumbnail : ''),
             channel: data.uploader || data.channel || 'YouTube Playlist',
             itemCount: items.length,
-            items
+            items,
+            totalDuration,
+            totalDurationString: formatDuration(totalDuration),
+            filesizeApprox: estimatedTotalSize > 0 ? estimatedTotalSize : undefined
           };
 
           resolve(playlist);

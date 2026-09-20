@@ -1,15 +1,27 @@
 import React, { useState } from 'react';
-import { Download, PlusCircle, ArrowUpDown } from 'lucide-react';
+import { Download, PlusCircle, ArrowUpDown, Pause, Play, Square } from 'lucide-react';
 import { DownloadItem } from '../components/downloads/DownloadItem';
 import { useQueueStore } from '../stores/useQueueStore';
 import { useAppStore } from '../stores/useAppStore';
 import { useI18n } from '../hooks/useI18n';
 
 export const DownloadsPage: React.FC = () => {
-  const { jobs, activeCount, sortQueue } = useQueueStore();
+  const { jobs, activeCount, sortQueue, pauseAll, resumeAll, stopAll } = useQueueStore();
   const { setActiveTab } = useAppStore();
   const { t } = useI18n();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const hasPausable = jobs.some(
+    (j) => j.status === 'downloading' || j.status === 'processing' || j.status === 'pending'
+  );
+  const hasResumable = jobs.some((j) => j.status === 'paused');
+  const hasStoppable = jobs.some(
+    (j) =>
+      j.status === 'downloading' ||
+      j.status === 'processing' ||
+      j.status === 'pending' ||
+      j.status === 'paused'
+  );
 
   const handleToggleSort = () => {
     const next = sortOrder === 'asc' ? 'desc' : 'asc';
@@ -19,7 +31,7 @@ export const DownloadsPage: React.FC = () => {
 
   return (
     <div className="main-content">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--text-primary)' }}>
             {t('downloads.title')}
@@ -29,7 +41,43 @@ export const DownloadsPage: React.FC = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {hasPausable && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => pauseAll()}
+              style={{ fontSize: 'var(--font-size-xs)', height: 32 }}
+              title={t('downloads.pauseAll')}
+            >
+              <Pause size={14} />
+              <span>{t('downloads.pauseAll')}</span>
+            </button>
+          )}
+
+          {hasResumable && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => resumeAll()}
+              style={{ fontSize: 'var(--font-size-xs)', height: 32 }}
+              title={t('downloads.resumeAll')}
+            >
+              <Play size={14} />
+              <span>{t('downloads.resumeAll')}</span>
+            </button>
+          )}
+
+          {hasStoppable && (
+            <button
+              className="btn btn-danger-ghost"
+              onClick={() => stopAll()}
+              style={{ fontSize: 'var(--font-size-xs)', height: 32 }}
+              title={t('downloads.stopAll')}
+            >
+              <Square size={14} />
+              <span>{t('downloads.stopAll')}</span>
+            </button>
+          )}
+
           {jobs.length > 1 && (
             <button
               className="btn btn-secondary"

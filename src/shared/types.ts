@@ -50,6 +50,7 @@ export interface PlaylistItem {
   index: number;
   selected?: boolean;
   isDownloaded?: boolean;
+  filesizeApprox?: number;
 }
 
 export interface PlaylistMetadata {
@@ -60,6 +61,9 @@ export interface PlaylistMetadata {
   channel: string;
   itemCount: number;
   items: PlaylistItem[];
+  totalDuration?: number;
+  totalDurationString?: string;
+  filesizeApprox?: number;
 }
 
 export interface DownloadJob {
@@ -68,6 +72,8 @@ export interface DownloadJob {
   type: 'video' | 'playlist-item';
   playlistId?: string;
   playlistTitle?: string;
+  playlistIndex?: number;
+  filesizeApprox?: number;
   title: string;
   thumbnail: string;
   channel?: string;
