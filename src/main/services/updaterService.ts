@@ -1,9 +1,11 @@
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import electronUpdater from 'electron-updater';
 const { autoUpdater } = electronUpdater;
 import https from 'node:https';
 import { UpdateInfo, UpdateProgress, UpdateStatus } from '../../shared/types';
 import { loggerService } from './loggerService';
+import { showNotification } from '../notifications';
+import { storageService } from './storageService';
 
 export class UpdaterService {
   private status: UpdateStatus = {
@@ -15,6 +17,7 @@ export class UpdaterService {
   };
 
   private onStatusChangeCallbacks: Array<(status: UpdateStatus) => void> = [];
+  private lastNotifiedVersion: string | null = null;
 
   constructor() {
     this.initAutoUpdater();
@@ -51,6 +54,7 @@ export class UpdaterService {
       this.status.updateInfo = updateInfo;
       this.status.error = null;
       this.updateState('available');
+      this.notifyNewVersionAvailable(updateInfo.version);
     });
 
     autoUpdater.on('update-not-available', () => {
@@ -209,6 +213,7 @@ export class UpdaterService {
                 };
                 this.status.error = null;
                 this.updateState('available');
+                this.notifyNewVersionAvailable(latestTag);
               } else {
                 this.status.updateInfo = null;
                 this.status.error = null;
@@ -240,6 +245,38 @@ export class UpdaterService {
 
       req.end();
     });
+  }
+
+  private notifyNewVersionAvailable(version: string): void {
+    if (this.lastNotifiedVersion === version) {
+      return;
+    }
+    this.lastNotifiedVersion = version;
+
+    try {
+      const settings = storageService.getSettings();
+      const isArabic = settings.language === 'ar';
+
+      const title = isArabic
+        ? 'تحديث جديد متوفر لـ TubeFlow 🚀'
+        : 'TubeFlow Update Available 🚀';
+
+      const body = isArabic
+        ? `الإصدار v${version} متوفر الآن للترقية. انقر هنا للمتابعة والتحديث.`
+        : `Version v${version} is ready to install. Click to open and upgrade.`;
+
+      showNotification(title, body, undefined, true, () => {
+        const windows = BrowserWindow.getAllWindows();
+        if (windows.length > 0) {
+          const win = windows[0];
+          if (win.isMinimized()) win.restore();
+          win.show();
+          win.focus();
+        }
+      });
+    } catch (e) {
+      loggerService.error(`[UPDATER] Failed to send update notification: ${e}`);
+    }
   }
 
   private simulateDevDownload(): void {

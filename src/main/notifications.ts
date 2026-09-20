@@ -38,7 +38,13 @@ export function getAppIconPath(customIcon?: string): string {
   return path.join(process.cwd(), 'public/icon.png');
 }
 
-export function showNotification(title: string, body: string, customIcon?: string, force: boolean = false): void {
+export function showNotification(
+  title: string,
+  body: string,
+  customIcon?: string,
+  force: boolean = false,
+  onClick?: () => void
+): void {
   const settings = storageService.getSettings();
   console.log('[NOTIF] showNotification called. settings.notifications =', settings.notifications, 'force =', force);
   if (!settings.notifications && !force) {
@@ -65,6 +71,17 @@ export function showNotification(title: string, body: string, customIcon?: strin
       });
 
       activeNotifications.add(notification);
+
+      if (onClick) {
+        notification.on('click', () => {
+          try {
+            console.log('[NOTIF] Electron native notification clicked');
+            onClick();
+          } catch (e) {
+            console.error('[NOTIF] Error in notification click handler:', e);
+          }
+        });
+      }
 
       notification.on('show', () => {
         console.log('[NOTIF] Electron native notification show event received');

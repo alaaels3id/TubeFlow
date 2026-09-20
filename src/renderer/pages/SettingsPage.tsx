@@ -22,6 +22,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { useUpdaterStore } from '../stores/useUpdaterStore';
 import { useI18n } from '../hooks/useI18n';
 import { formatBytes } from '../utils/format';
+import { formatReleaseNotes } from '../utils/formatReleaseNotes';
 import { ThemeMode, FontSize, Language, DuplicateAction } from '@shared/types';
 
 import { Logo } from '../components/common/Logo';
@@ -634,23 +635,23 @@ export const SettingsPage: React.FC = () => {
           {updateInfo?.releaseNotes && (
             <div
               style={{
-                marginTop: 8,
-                padding: 10,
+                marginTop: 10,
+                padding: 12,
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-sm)',
-                fontSize: 'var(--font-size-xs)',
-                color: 'var(--text-secondary)',
-                maxHeight: 120,
+                maxHeight: 180,
                 overflowY: 'auto'
               }}
             >
-              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                {t('updater.releaseNotes')} ({updateInfo.version}):
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Sparkles size={14} color="var(--color-primary-500)" />
+                <span>{t('updater.releaseNotes')} ({updateInfo.version}):</span>
               </div>
-              <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                {updateInfo.releaseNotes}
-              </div>
+              <div
+                className="release-notes-content"
+                dangerouslySetInnerHTML={{ __html: formatReleaseNotes(updateInfo.releaseNotes) }}
+              />
             </div>
           )}
         </div>

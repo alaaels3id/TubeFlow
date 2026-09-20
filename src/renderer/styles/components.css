@@ -474,3 +474,58 @@
   color: var(--text-primary);
   animation: fadeIn 0.2s ease-out;
 }
+
+/* Release Notes Formatted Content */
+.release-notes-content {
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.release-notes-content h1,
+.release-notes-content h2,
+.release-notes-content h3 {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+.release-notes-content h4,
+.release-notes-content h5 {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-primary-400);
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.release-notes-content ul,
+.release-notes-content ol {
+  padding-inline-start: 18px;
+  margin: 6px 0;
+}
+
+.release-notes-content li {
+  margin-bottom: 4px;
+}
+
+.release-notes-content strong,
+.release-notes-content b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.release-notes-content code {
+  background-color: var(--bg-input);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-size: 11px;
+  border: 1px solid var(--border-subtle);
+}
+
+.release-notes-content p {
+  margin-bottom: 6px;
+}

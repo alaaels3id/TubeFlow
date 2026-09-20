@@ -52,6 +52,11 @@ function createWindow() {
     setTimeout(() => {
       updaterService.checkForUpdates().catch(() => {});
     }, 4000);
+
+    // Periodic update check every 2 hours
+    setInterval(() => {
+      updaterService.checkForUpdates().catch(() => {});
+    }, 2 * 60 * 60 * 1000);
   });
 
   // Load URL or file
