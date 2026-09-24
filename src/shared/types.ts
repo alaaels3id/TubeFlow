@@ -69,7 +69,7 @@ export interface PlaylistMetadata {
 export interface DownloadJob {
   id: string;
   url: string;
-  type: 'video' | 'playlist-item';
+  type: 'video' | 'playlist-item' | 'file';
   playlistId?: string;
   playlistTitle?: string;
   playlistIndex?: number;
@@ -96,7 +96,7 @@ export interface DownloadJob {
 export interface HistoryItem {
   id: string;
   url: string;
-  type: 'video' | 'playlist';
+  type: 'video' | 'playlist' | 'file';
   title: string;
   thumbnail: string;
   channel?: string;
@@ -138,7 +138,7 @@ export interface SystemDependencies {
 }
 
 export interface AnalyzeResult {
-  type: 'video' | 'playlist';
+  type: 'video' | 'playlist' | 'file';
   video?: VideoMetadata;
   playlist?: PlaylistMetadata;
 }

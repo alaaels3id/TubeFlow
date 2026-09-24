@@ -5,6 +5,24 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-09-24
+
+### ✨ Features & Improvements
+
+#### 🌐 Chrome Extension Connector & Desktop Bridge
+- **Browser-to-Desktop Connector**: Added native integration with the new TubeFlow Chrome Extension (Manifest V3), enabling 1-click downloads directly from web pages.
+- **Embedded Local Bridge Server**: Lightweight internal HTTP server on `127.0.0.1:54321` with CORS support for zero-friction local browser-to-desktop communication.
+- **Chrome Native Messaging Support**: Compatible with Chrome's native messaging protocol (`com.tubeflow.connector`) via standard I/O pipes.
+- **Custom Protocol Handling**: Registered `tubeflow://` protocol client allowing deep links from browsers to instantly queue downloads or focus the application.
+- **Auto-Focus & Native Alerts**: Automatically restores and focuses the TubeFlow window when an incoming download request is received, coupled with system desktop alerts.
+
+#### 📦 Direct File Streaming Downloader Engine
+- **Universal File Downloads**: Added native streaming download engine for generic non-media resources (`.zip`, `.rar`, `.7z`, `.iso`, `.dmg`, `.exe`, `.pkg`, `.pdf`, `.docx`, etc.).
+- **Live Transfer Metrics**: Full real-time speed, bytes downloaded, total size, percentage progress, and ETA calculation for all direct files.
+- **Unified Queue & History Integration**: Direct files appear seamlessly in the active Downloads queue with pause, resume, cancel, and persistent history tracking alongside video and torrent downloads.
+
+---
+
 ## [1.6.0] - 2026-09-24
 
 ### ✨ Features & Improvements

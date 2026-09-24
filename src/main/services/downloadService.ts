@@ -9,8 +9,25 @@ import { sanitizeFilename, formatDuration } from '../utils/sanitize';
 
 interface ActiveProcess {
   job: DownloadJob;
-  process: ChildProcess;
+  process?: ChildProcess;
+  abortController?: AbortController;
   killedIntentional?: boolean;
+}
+
+
+function isDirectFileUrl(url: string): boolean {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    const directExts = [
+      '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz',
+      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+      '.iso', '.dmg', '.exe', '.msi', '.pkg', '.deb', '.rpm', '.apk',
+      '.bin', '.csv', '.txt'
+    ];
+    return directExts.some((ext) => pathname.endsWith(ext));
+  } catch {
+    return false;
+  }
 }
 
 export class DownloadService {
@@ -53,7 +70,7 @@ export class DownloadService {
 
   public async startDownload(options: {
     url: string;
-    type: 'video' | 'playlist-item';
+    type: 'video' | 'playlist-item' | 'file';
     title: string;
     thumbnail: string;
     channel?: string;
@@ -162,6 +179,10 @@ export class DownloadService {
   }
 
   private executeJob(job: DownloadJob): void {
+    if (job.type === 'file' || isDirectFileUrl(job.url)) {
+      this.executeDirectFileJob(job);
+      return;
+    }
     job.status = 'downloading';
     this.emitProgress(job);
 
@@ -504,7 +525,7 @@ export class DownloadService {
     const active = this.activeProcesses.get(id);
     if (active) {
       active.killedIntentional = true;
-      active.process.kill('SIGTERM');
+      if (active.abortController) active.abortController.abort(); if (active.process) active.process.kill('SIGTERM');
       this.activeProcesses.delete(id);
       active.job.status = 'paused';
       this.emitProgress(active.job);
@@ -536,7 +557,7 @@ export class DownloadService {
     const active = this.activeProcesses.get(id);
     if (active) {
       active.killedIntentional = true;
-      active.process.kill('SIGKILL');
+      if (active.abortController) active.abortController.abort(); if (active.process) active.process.kill('SIGKILL');
       this.activeProcesses.delete(id);
       active.job.status = 'cancelled';
       this.emitProgress(active.job);
@@ -574,7 +595,7 @@ export class DownloadService {
   public pauseAll(): boolean {
     for (const [id, active] of this.activeProcesses.entries()) {
       active.killedIntentional = true;
-      active.process.kill('SIGTERM');
+      if (active.abortController) active.abortController.abort(); if (active.process) active.process.kill('SIGTERM');
       active.job.status = 'paused';
       this.emitProgress(active.job);
       this.activeProcesses.delete(id);
@@ -607,7 +628,7 @@ export class DownloadService {
   public stopAll(): boolean {
     for (const [id, active] of this.activeProcesses.entries()) {
       active.killedIntentional = true;
-      active.process.kill('SIGKILL');
+      if (active.abortController) active.abortController.abort(); if (active.process) active.process.kill('SIGKILL');
       active.job.status = 'cancelled';
       this.emitProgress(active.job);
       this.activeProcesses.delete(id);

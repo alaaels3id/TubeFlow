@@ -5,12 +5,23 @@ import { registerIpcHandlers } from './ipc';
 import { getAppIconPath } from './notifications';
 import { loggerService } from './services/loggerService';
 import { updaterService } from './services/updaterService';
+import { bridgeService } from './services/bridgeService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.name = 'TubeFlow';
 app.setName('TubeFlow');
+
+// Register tubeflow:// protocol
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('tubeflow', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('tubeflow');
+}
+
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.tubeflow.app');
 }
@@ -45,6 +56,7 @@ function createWindow() {
   });
 
   registerIpcHandlers(mainWindow);
+  bridgeService.start(mainWindow);
 
   // Show window smoothly when ready
   mainWindow.once('ready-to-show', () => {
@@ -160,4 +172,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  bridgeService.stop();
 });
