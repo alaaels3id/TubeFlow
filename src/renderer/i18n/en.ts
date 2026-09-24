@@ -6,6 +6,7 @@ export const en = {
   },
   nav: {
     dashboard: 'Dashboard',
+    torrents: 'Torrents',
     downloads: 'Downloads',
     history: 'History',
     settings: 'Settings'

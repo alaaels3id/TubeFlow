@@ -173,3 +173,52 @@ export interface UpdateStatus {
   progress?: UpdateProgress | null;
   error?: string | null;
 }
+
+export type TorrentCategory = 'all' | 'movies' | 'apps' | 'games' | 'music' | 'other';
+
+export interface TorrentSearchResult {
+  id: string;
+  name: string;
+  infoHash: string;
+  magnet: string;
+  size: number;
+  formattedSize: string;
+  seeders: number;
+  leechers: number;
+  category: string;
+  categoryGroup: TorrentCategory;
+  added?: string;
+  imdb?: string;
+  source: string;
+}
+
+export type TorrentStatus = 'downloading' | 'seeding' | 'paused' | 'completed' | 'queued' | 'error';
+
+export interface TorrentFileItem {
+  name: string;
+  path: string;
+  length: number;
+  downloaded: number;
+  progress: number;
+}
+
+export interface TorrentJob {
+  id: string;
+  infoHash: string;
+  name: string;
+  magnet: string;
+  destination: string;
+  status: TorrentStatus;
+  progress: number; // 0 to 100
+  downloadedBytes: number;
+  totalBytes: number;
+  downloadSpeed: number; // bytes per sec
+  uploadSpeed: number; // bytes per sec
+  numPeers: number;
+  eta: number; // seconds
+  files: TorrentFileItem[];
+  createdAt: string;
+  completedAt?: string;
+  errorMessage?: string;
+}
+

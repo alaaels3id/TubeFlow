@@ -6,6 +6,8 @@ import { binaryService } from '../services/binaryService';
 import { showNotification } from '../notifications';
 import { loggerService } from '../services/loggerService';
 import { updaterService } from '../services/updaterService';
+import { torrentService } from '../services/torrentService';
+import { torrentSearchService } from '../services/torrentSearchService';
 
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   // Wire download callbacks to push to renderer
@@ -190,4 +192,60 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       mainWindow.webContents.send('updater:status-changed', status);
     }
   });
+
+  // Torrents
+  torrentService.setOnUpdate((jobs) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('torrent:update', jobs);
+    }
+  });
+
+  ipcMain.handle('torrent:search', async (_event, query: string, category?: string) => {
+    return await torrentSearchService.search(query, category);
+  });
+
+  ipcMain.handle('torrent:start', async (_event, options) => {
+    return await torrentService.addTorrent(options);
+  });
+
+  ipcMain.handle('torrent:pause', async (_event, id: string) => {
+    return await torrentService.pauseTorrent(id);
+  });
+
+  ipcMain.handle('torrent:resume', async (_event, id: string) => {
+    return await torrentService.resumeTorrent(id);
+  });
+
+  ipcMain.handle('torrent:remove', async (_event, id: string, deleteFiles?: boolean) => {
+    return await torrentService.removeTorrent(id, deleteFiles);
+  });
+
+  ipcMain.handle('torrent:getAll', async () => {
+    return torrentService.getAllJobs();
+  });
+
+  ipcMain.handle('torrent:selectFile', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select .torrent file',
+      filters: [{ name: 'Torrent Files', extensions: ['torrent'] }],
+      properties: ['openFile']
+    });
+
+    if (result.canceled || !result.filePaths.length) {
+      return null;
+    }
+
+    const filePath = result.filePaths[0];
+    const pathMod = await import('node:path');
+    const fsMod = await import('node:fs');
+    const fileName = pathMod.basename(filePath);
+    const fileBuffer = fsMod.readFileSync(filePath);
+
+    return {
+      name: fileName,
+      path: filePath,
+      data: fileBuffer.toString('base64')
+    };
+  });
 }
+

@@ -91,6 +91,24 @@ const api: ElectronAPI = {
         ipcRenderer.removeListener('updater:status-changed', listener);
       };
     }
+  },
+
+  // Torrents
+  torrent: {
+    search: (query: string, category?: string) => ipcRenderer.invoke('torrent:search', query, category),
+    start: (options: { magnet: string; name?: string; destination?: string }) => ipcRenderer.invoke('torrent:start', options),
+    pause: (id: string) => ipcRenderer.invoke('torrent:pause', id),
+    resume: (id: string) => ipcRenderer.invoke('torrent:resume', id),
+    remove: (id: string, deleteFiles?: boolean) => ipcRenderer.invoke('torrent:remove', id, deleteFiles),
+    getAll: () => ipcRenderer.invoke('torrent:getAll'),
+    selectFile: () => ipcRenderer.invoke('torrent:selectFile'),
+    onUpdate: (callback: (torrents: any[]) => void) => {
+      const handler = (_event: any, torrents: any[]) => callback(torrents);
+      ipcRenderer.on('torrent:update', handler);
+      return () => {
+        ipcRenderer.removeListener('torrent:update', handler);
+      };
+    }
   }
 };
 

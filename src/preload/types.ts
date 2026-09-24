@@ -4,7 +4,9 @@ import {
   DownloadJob,
   HistoryItem,
   SystemDependencies,
-  UpdateStatus
+  UpdateStatus,
+  TorrentSearchResult,
+  TorrentJob
 } from '../shared/types';
 
 export interface ElectronAPI {
@@ -85,6 +87,18 @@ export interface ElectronAPI {
     downloadUpdate: () => Promise<void>;
     installUpdate: () => Promise<void>;
     onStatusChange: (callback: (status: UpdateStatus) => void) => () => void;
+  };
+
+  // Torrents
+  torrent: {
+    search: (query: string, category?: string) => Promise<TorrentSearchResult[]>;
+    start: (options: { magnet: string; name?: string; destination?: string }) => Promise<string>;
+    pause: (id: string) => Promise<boolean>;
+    resume: (id: string) => Promise<boolean>;
+    remove: (id: string, deleteFiles?: boolean) => Promise<boolean>;
+    getAll: () => Promise<TorrentJob[]>;
+    selectFile: () => Promise<{ name: string; path: string; data: string } | null>;
+    onUpdate: (callback: (torrents: TorrentJob[]) => void) => () => void;
   };
 }
 

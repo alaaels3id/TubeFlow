@@ -7,8 +7,8 @@ export interface ToastItem {
 }
 
 interface AppStore {
-  activeTab: 'dashboard' | 'downloads' | 'history' | 'settings';
-  setActiveTab: (tab: 'dashboard' | 'downloads' | 'history' | 'settings') => void;
+  activeTab: 'dashboard' | 'torrents' | 'downloads' | 'history' | 'settings';
+  setActiveTab: (tab: 'dashboard' | 'torrents' | 'downloads' | 'history' | 'settings') => void;
   
   toasts: ToastItem[];
   addToast: (message: string, type?: 'info' | 'success' | 'error' | 'warning') => void;

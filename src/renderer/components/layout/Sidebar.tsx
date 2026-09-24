@@ -1,19 +1,21 @@
 import React from 'react';
-import { LayoutDashboard, Download, History, Settings, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Download, History, Settings, ShieldCheck, Magnet } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { useAppStore } from '../../stores/useAppStore';
 import { useQueueStore } from '../../stores/useQueueStore';
+import { useTorrentStore } from '../../stores/useTorrentStore';
 import { useUpdaterStore } from '../../stores/useUpdaterStore';
 import { useI18n } from '../../hooks/useI18n';
 
 export const Sidebar: React.FC = () => {
   const { activeTab, setActiveTab } = useAppStore();
   const activeCount = useQueueStore((state) => state.activeCount);
+  const activeTorrentCount = useTorrentStore((state) => state.activeCount);
   const { currentVersion, state: updateState } = useUpdaterStore();
   const { t } = useI18n();
 
   interface NavItem {
-    id: 'dashboard' | 'downloads' | 'history' | 'settings';
+    id: 'dashboard' | 'torrents' | 'downloads' | 'history' | 'settings';
     label: string;
     icon: any;
     badge?: number;
@@ -23,6 +25,7 @@ export const Sidebar: React.FC = () => {
 
   const navItems: NavItem[] = [
     { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { id: 'torrents', label: t('nav.torrents') || 'Torrents', icon: Magnet, badge: activeTorrentCount > 0 ? activeTorrentCount : undefined },
     { id: 'downloads', label: t('nav.downloads'), icon: Download, badge: activeCount > 0 ? activeCount : undefined },
     { id: 'history', label: t('nav.history'), icon: History },
     { id: 'settings', label: t('nav.settings'), icon: Settings, badge: hasUpdate ? 1 : undefined }

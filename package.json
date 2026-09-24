@@ -1,6 +1,6 @@
 {
   "name": "tubeflow",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "type": "module",
   "description": "Modern YouTube Video & Playlist Downloader Desktop Application",
   "author": "TubeFlow",
@@ -71,6 +71,7 @@
     "node-notifier": "^10.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "webtorrent": "^2.8.5",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
@@ -79,6 +80,7 @@
     "@types/node-notifier": "^8.0.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/webtorrent": "^3.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "electron": "^41.7.1",
     "electron-builder": "^26.15.3",

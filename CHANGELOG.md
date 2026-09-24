@@ -5,6 +5,22 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-09-24
+
+### ✨ Features & Improvements
+
+#### 🧲 Torrent Downloader & Search Section
+- **Unified Torrent Search Engine**: Integrated real-time torrent search across movies, applications, games, and audio powered by verified torrent networks.
+- **Smart Category Filtering**: Easily filter results between **All**, **Movies & Video**, **Applications & Software**, **Games**, and **Music**.
+- **Embedded WebTorrent Engine**: Fully native BitTorrent client embedded into Electron's main process, downloading directly into the local device's `Downloads` folder.
+- **Live Transfer Metrics**: Real-time display of download speed, upload speed, connected peers, seeders/leechers ratio, and accurate estimated time remaining (ETA).
+- **Direct Magnet & .torrent Loading**: Supports pasting raw `magnet:?xt=...` links, 40-character info-hashes, or picking local `.torrent` files with the native file picker.
+- **Queue Controls & Persistence**: Pause, resume, remove, and open finished files directly in Finder/Explorer, with active state persisted across app restarts.
+- **Desktop Notifications**: Automatic system notifications upon torrent completion with audio/visual alerts.
+- **Bilingual Interface**: Full English and Arabic localization across all torrent components, badges, and navigation tabs.
+
+---
+
 ## [1.5.0] - 2026-09-20
 
 ### ✨ Features & Improvements

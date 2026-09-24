@@ -6,6 +6,7 @@ export const ar = {
   },
   nav: {
     dashboard: 'الرئيسية',
+    torrents: 'التورنت',
     downloads: 'التنزيلات',
     history: 'السجل',
     settings: 'الإعدادات'
