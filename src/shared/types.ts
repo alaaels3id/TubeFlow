@@ -175,6 +175,7 @@ export interface UpdateStatus {
 }
 
 export type TorrentCategory = 'all' | 'movies' | 'apps' | 'games' | 'music' | 'other';
+export type TorrentProvider = 'all' | 'thepiratebay' | 'yts';
 
 export interface TorrentSearchResult {
   id: string;
@@ -190,6 +191,11 @@ export interface TorrentSearchResult {
   added?: string;
   imdb?: string;
   source: string;
+  poster?: string;
+  rating?: number;
+  year?: number;
+  quality?: string;
+  genres?: string[];
 }
 
 export type TorrentStatus = 'downloading' | 'seeding' | 'paused' | 'completed' | 'queued' | 'error';

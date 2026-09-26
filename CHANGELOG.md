@@ -5,6 +5,20 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-09-26
+
+### ✨ Features & Improvements
+
+#### 🎬 YTS (YIFY) Movie Torrent Indexer Integration
+- **Direct YTS Movie Search**: Integrated YTS (YIFY) high-definition movie indexer with multi-mirror automatic failover (`movies-api.accel.li`, `yts.gg`, `yts.bz`).
+- **Multiple Quality Choices**: Automatically lists distinct resolutions per movie (720p, 1080p, 2160p 4K) with file sizes and seed counts.
+- **Rich Movie Metadata**: Displays movie cover art posters, IMDb ratings (`⭐`), release years, and quality badges directly on search result cards.
+- **Parallel Multi-Source Querying**: Queries both YTS (YIFY) and ThePirateBay simultaneously when searching movies or browsing "All Sources", deduplicating by infoHash.
+- **Source Filter Switcher**: Interactive toolbar filter to toggle between **All Sources**, **YTS (YIFY)**, and **ThePirateBay**.
+- **Enhanced Magnet Link Trackers**: Added reliable high-performance public trackers to all generated magnet URIs for fast peer discovery.
+
+---
+
 ## [1.7.0] - 2026-09-24
 
 ### ✨ Features & Improvements

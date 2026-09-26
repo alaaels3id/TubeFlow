@@ -200,8 +200,8 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     }
   });
 
-  ipcMain.handle('torrent:search', async (_event, query: string, category?: string) => {
-    return await torrentSearchService.search(query, category);
+  ipcMain.handle('torrent:search', async (_event, query: string, category?: string, provider?: string) => {
+    return await torrentSearchService.search(query, category, provider);
   });
 
   ipcMain.handle('torrent:start', async (_event, options) => {

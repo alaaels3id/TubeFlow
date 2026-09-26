@@ -14,7 +14,7 @@ import {
   Inbox,
   HardDrive
 } from 'lucide-react';
-import { TorrentCategory, TorrentJob, TorrentSearchResult } from '../../shared/types';
+import { TorrentCategory, TorrentJob, TorrentProvider, TorrentSearchResult } from '../../shared/types';
 import { useTorrentStore } from '../stores/useTorrentStore';
 import { TorrentSearchResultItem } from '../components/torrent/TorrentSearchResultItem';
 import { TorrentCard } from '../components/torrent/TorrentCard';
@@ -26,6 +26,8 @@ export const TorrentsPage: React.FC = () => {
     setSearchQuery,
     searchCategory,
     setSearchCategory,
+    searchProvider,
+    setSearchProvider,
     searchResults,
     isSearching,
     searchError,
@@ -64,6 +66,12 @@ export const TorrentsPage: React.FC = () => {
     { id: 'apps', label: 'Applications', icon: Box },
     { id: 'games', label: 'Games', icon: Gamepad2 },
     { id: 'music', label: 'Music', icon: Music }
+  ];
+
+  const providers: { id: TorrentProvider; label: string }[] = [
+    { id: 'all', label: 'All Sources' },
+    { id: 'yts', label: 'YTS (YIFY)' },
+    { id: 'thepiratebay', label: 'ThePirateBay' }
   ];
 
   // Calculate total download speed
@@ -231,7 +239,55 @@ export const TorrentsPage: React.FC = () => {
             })}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {/* Provider Filter Switcher */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                padding: 2,
+                gap: 2
+              }}
+            >
+              {providers.map((p) => {
+                const isSelected = searchProvider === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setSearchProvider(p.id);
+                      if (p.id === 'yts' && searchCategory !== 'movies' && searchCategory !== 'all') {
+                        setSearchCategory('movies');
+                      }
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '4px 10px',
+                      borderRadius: 'calc(var(--radius-sm) - 2px)',
+                      border: 'none',
+                      backgroundColor: isSelected
+                        ? (p.id === 'yts' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(178, 58, 72, 0.25)')
+                        : 'transparent',
+                      color: isSelected
+                        ? (p.id === 'yts' ? '#10b981' : 'var(--color-primary-300)')
+                        : 'var(--text-muted)',
+                      fontSize: '11px',
+                      fontWeight: isSelected ? 600 : 500,
+                      cursor: 'pointer',
+                      transition: 'all var(--transition-fast)'
+                    }}
+                  >
+                    <span>{p.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => setShowDirectBar(!showDirectBar)}

@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import { TorrentCategory, TorrentJob, TorrentSearchResult } from '../../shared/types';
+import { TorrentCategory, TorrentJob, TorrentProvider, TorrentSearchResult } from '../../shared/types';
 import { useAppStore } from './useAppStore';
 
 interface TorrentStore {
   // Search
   searchQuery: string;
   searchCategory: TorrentCategory;
+  searchProvider: TorrentProvider;
   searchResults: TorrentSearchResult[];
   isSearching: boolean;
   searchError: string | null;
@@ -21,6 +22,7 @@ interface TorrentStore {
   // Actions
   setSearchQuery: (query: string) => void;
   setSearchCategory: (cat: TorrentCategory) => void;
+  setSearchProvider: (provider: TorrentProvider) => void;
   setViewTab: (tab: 'search' | 'downloads') => void;
   setSort: (sort: 'seeders' | 'size' | 'name') => void;
   search: (customQuery?: string) => Promise<void>;
@@ -35,6 +37,7 @@ interface TorrentStore {
 export const useTorrentStore = create<TorrentStore>((set, get) => ({
   searchQuery: '',
   searchCategory: 'all',
+  searchProvider: 'all',
   searchResults: [],
   isSearching: false,
   searchError: null,
@@ -50,6 +53,13 @@ export const useTorrentStore = create<TorrentStore>((set, get) => ({
   setSearchCategory: (cat) => {
     set({ searchCategory: cat });
     // If user already searched something, re-trigger search with new category
+    const currentQuery = get().searchQuery.trim();
+    if (currentQuery) {
+      get().search(currentQuery);
+    }
+  },
+  setSearchProvider: (provider) => {
+    set({ searchProvider: provider });
     const currentQuery = get().searchQuery.trim();
     if (currentQuery) {
       get().search(currentQuery);
@@ -86,7 +96,7 @@ export const useTorrentStore = create<TorrentStore>((set, get) => ({
     set({ isSearching: true, searchError: null, hasSearched: true });
 
     try {
-      const results = await window.api.torrent.search(query, get().searchCategory);
+      const results = await window.api.torrent.search(query, get().searchCategory, get().searchProvider);
       // Sort initially by seeders desc
       results.sort((a, b) => b.seeders - a.seeders);
       set({ searchResults: results, isSearching: false });

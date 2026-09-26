@@ -95,7 +95,7 @@ const api: ElectronAPI = {
 
   // Torrents
   torrent: {
-    search: (query: string, category?: string) => ipcRenderer.invoke('torrent:search', query, category),
+    search: (query: string, category?: string, provider?: string) => ipcRenderer.invoke('torrent:search', query, category, provider),
     start: (options: { magnet: string; name?: string; destination?: string }) => ipcRenderer.invoke('torrent:start', options),
     pause: (id: string) => ipcRenderer.invoke('torrent:pause', id),
     resume: (id: string) => ipcRenderer.invoke('torrent:resume', id),

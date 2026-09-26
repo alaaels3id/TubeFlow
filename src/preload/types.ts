@@ -91,7 +91,7 @@ export interface ElectronAPI {
 
   // Torrents
   torrent: {
-    search: (query: string, category?: string) => Promise<TorrentSearchResult[]>;
+    search: (query: string, category?: string, provider?: string) => Promise<TorrentSearchResult[]>;
     start: (options: { magnet: string; name?: string; destination?: string }) => Promise<string>;
     pause: (id: string) => Promise<boolean>;
     resume: (id: string) => Promise<boolean>;

@@ -10,7 +10,15 @@ const DEFAULT_TRACKERS = [
   'udp://tracker.dler.org:6969/announce',
   'udp://exodus.desync.com:6969',
   'udp://open.demonii.com:1337/announce',
-  'udp://explodie.org:6969/announce'
+  'udp://explodie.org:6969/announce',
+  'udp://tracker.openbittorrent.com:80',
+  'udp://tracker.coppersurfer.tk:6969'
+];
+
+const YTS_BASE_URLS = [
+  'https://movies-api.accel.li/api/v2',
+  'https://yts.gg/api/v2',
+  'https://yts.bz/api/v2'
 ];
 
 export class TorrentSearchService {
@@ -50,7 +58,149 @@ export class TorrentSearchService {
     return `magnet:?xt=urn:btih:${infoHash.toLowerCase()}&dn=${dn}${trackers}`;
   }
 
-  public async search(query: string, category: string = 'all'): Promise<TorrentSearchResult[]> {
+  public async searchApibay(query: string, category: string = 'all'): Promise<TorrentSearchResult[]> {
+    let catParam = '';
+    if (category === 'movies') catParam = '200';
+    else if (category === 'apps') catParam = '300';
+    else if (category === 'games') catParam = '400';
+    else if (category === 'music') catParam = '100';
+
+    const url = `https://apibay.org/q.php?q=${encodeURIComponent(query)}&cat=${catParam}`;
+
+    try {
+      loggerService.info('TORRENT_SEARCH', `Searching apibay for "${query}" with category "${category}"`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        }
+      });
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        throw new Error(`Apibay returned status ${res.status}`);
+      }
+
+      const data = (await res.json()) as any[];
+      if (!Array.isArray(data)) {
+        return [];
+      }
+
+      if (data.length === 1 && (data[0].name === 'No results returned' || data[0].id === '0')) {
+        return [];
+      }
+
+      const results: TorrentSearchResult[] = data
+        .filter((item) => item.info_hash && item.name && item.id !== '0')
+        .map((item) => {
+          const size = parseInt(item.size, 10) || 0;
+          const seeders = parseInt(item.seeders, 10) || 0;
+          const leechers = parseInt(item.leechers, 10) || 0;
+          const { label, group } = this.mapCategory(item.category);
+          const magnet = this.createMagnetUri(item.info_hash, item.name);
+
+          return {
+            id: `tp-${item.id || item.info_hash}`,
+            name: item.name,
+            infoHash: item.info_hash.toLowerCase(),
+            magnet,
+            size,
+            formattedSize: this.formatSize(size),
+            seeders,
+            leechers,
+            category: label,
+            categoryGroup: group,
+            added: item.added ? new Date(parseInt(item.added, 10) * 1000).toLocaleDateString() : undefined,
+            imdb: item.imdb || undefined,
+            source: 'ThePirateBay'
+          };
+        });
+
+      return results;
+    } catch (err: any) {
+      loggerService.error('TORRENT_SEARCH', `Error searching apibay: ${err.message}`);
+      return [];
+    }
+  }
+
+  public async searchYTS(query: string): Promise<TorrentSearchResult[]> {
+    loggerService.info('TORRENT_SEARCH', `Searching YTS for "${query}"`);
+
+    for (const baseUrl of YTS_BASE_URLS) {
+      try {
+        const url = `${baseUrl}/list_movies.json?query_term=${encodeURIComponent(query)}&limit=20&sort_by=seeds`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 9000);
+
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)'
+          }
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) {
+          continue;
+        }
+
+        const json = await res.json();
+        if (json?.status !== 'ok' || !json?.data?.movies || !Array.isArray(json.data.movies)) {
+          return [];
+        }
+
+        const results: TorrentSearchResult[] = [];
+
+        for (const movie of json.data.movies) {
+          if (!movie.torrents || !Array.isArray(movie.torrents)) continue;
+
+          for (const tor of movie.torrents) {
+            if (!tor.hash) continue;
+            const size = tor.size_bytes || 0;
+            const qualityTag = tor.quality ? tor.quality.toUpperCase() : '';
+            const typeTag = tor.type ? tor.type.toUpperCase() : '';
+            const tagStr = [qualityTag, typeTag].filter(Boolean).join(' ');
+            const movieTitle = movie.title_long || movie.title || 'Movie';
+            const fullName = tagStr ? `${movieTitle} [${tagStr}] [YTS]` : `${movieTitle} [YTS]`;
+
+            const magnet = this.createMagnetUri(tor.hash, fullName);
+
+            results.push({
+              id: `yts-${movie.id}-${tor.hash}`,
+              name: fullName,
+              infoHash: tor.hash.toLowerCase(),
+              magnet,
+              size,
+              formattedSize: tor.size || this.formatSize(size),
+              seeders: parseInt(tor.seeds, 10) || 0,
+              leechers: parseInt(tor.peers, 10) || 0,
+              category: 'Movie',
+              categoryGroup: 'movies',
+              source: 'YTS (YIFY)',
+              added: tor.date_uploaded ? new Date(tor.date_uploaded).toLocaleDateString() : undefined,
+              imdb: movie.imdb_code || undefined,
+              poster: movie.medium_cover_image || movie.small_cover_image || undefined,
+              rating: typeof movie.rating === 'number' && movie.rating > 0 ? movie.rating : undefined,
+              year: movie.year || undefined,
+              quality: tor.quality || undefined,
+              genres: movie.genres || []
+            });
+          }
+        }
+
+        return results;
+      } catch (e: any) {
+        loggerService.warn('TORRENT_SEARCH', `YTS mirror ${baseUrl} failed: ${e?.message || e}`);
+      }
+    }
+
+    return [];
+  }
+
+  public async search(query: string, category: string = 'all', provider: string = 'all'): Promise<TorrentSearchResult[]> {
     const trimmed = query.trim();
     if (!trimmed) return [];
 
@@ -98,73 +248,42 @@ export class TorrentSearchService {
       ];
     }
 
-    // Map Category filter to apibay codes
-    let catParam = '';
-    if (category === 'movies') catParam = '200';
-    else if (category === 'apps') catParam = '300';
-    else if (category === 'games') catParam = '400';
-    else if (category === 'music') catParam = '100';
-
-    const url = `https://apibay.org/q.php?q=${encodeURIComponent(trimmed)}&cat=${catParam}`;
-
-    try {
-      loggerService.info('TORRENT_SEARCH', `Searching apibay for "${trimmed}" with category "${category}"`);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
-
-      const res = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-        }
-      });
-      clearTimeout(timeout);
-
-      if (!res.ok) {
-        throw new Error(`Apibay returned status ${res.status}`);
-      }
-
-      const data = (await res.json()) as any[];
-      if (!Array.isArray(data)) {
-        return [];
-      }
-
-      // If apibay returns "No results returned"
-      if (data.length === 1 && (data[0].name === 'No results returned' || data[0].id === '0')) {
-        return [];
-      }
-
-      const results: TorrentSearchResult[] = data
-        .filter((item) => item.info_hash && item.name && item.id !== '0')
-        .map((item) => {
-          const size = parseInt(item.size, 10) || 0;
-          const seeders = parseInt(item.seeders, 10) || 0;
-          const leechers = parseInt(item.leechers, 10) || 0;
-          const { label, group } = this.mapCategory(item.category);
-          const magnet = this.createMagnetUri(item.info_hash, item.name);
-
-          return {
-            id: String(item.id || item.info_hash),
-            name: item.name,
-            infoHash: item.info_hash.toLowerCase(),
-            magnet,
-            size,
-            formattedSize: this.formatSize(size),
-            seeders,
-            leechers,
-            category: label,
-            categoryGroup: group,
-            added: item.added ? new Date(parseInt(item.added, 10) * 1000).toLocaleDateString() : undefined,
-            imdb: item.imdb || undefined,
-            source: 'ThePirateBay'
-          };
-        });
-
-      return results;
-    } catch (err: any) {
-      loggerService.error('TORRENT_SEARCH', `Error searching torrents: ${err.message}`);
-      return [];
+    // Provider Routing
+    if (provider === 'yts') {
+      return await this.searchYTS(trimmed);
     }
+
+    if (provider === 'thepiratebay') {
+      return await this.searchApibay(trimmed, category);
+    }
+
+    // Default 'all': Search both if movie-related or all
+    if (category === 'movies' || category === 'all') {
+      const [apibayRes, ytsRes] = await Promise.allSettled([
+        this.searchApibay(trimmed, category),
+        this.searchYTS(trimmed)
+      ]);
+
+      const ytsList = ytsRes.status === 'fulfilled' ? ytsRes.value : [];
+      const apibayList = apibayRes.status === 'fulfilled' ? apibayRes.value : [];
+
+      // Combine YTS first (usually higher quality / seeded), then Apibay
+      const combined = [...ytsList, ...apibayList];
+      const seen = new Set<string>();
+      const deduped: TorrentSearchResult[] = [];
+
+      for (const item of combined) {
+        if (!seen.has(item.infoHash)) {
+          seen.add(item.infoHash);
+          deduped.push(item);
+        }
+      }
+
+      return deduped;
+    }
+
+    // For non-movie categories (apps, games, music), apibay is the only applicable provider
+    return await this.searchApibay(trimmed, category);
   }
 }
 
