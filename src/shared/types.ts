@@ -184,7 +184,7 @@ export interface UpdateStatus {
 }
 
 export type TorrentCategory = 'all' | 'movies' | 'apps' | 'games' | 'music' | 'other';
-export type TorrentProvider = 'all' | 'thepiratebay' | 'yts';
+export type TorrentProvider = 'all' | 'thepiratebay' | 'yts' | 'torrentmac';
 
 export interface TorrentSearchResult {
   id: string;

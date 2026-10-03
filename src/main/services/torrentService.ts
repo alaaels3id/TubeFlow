@@ -124,7 +124,35 @@ export class TorrentService {
       throw new Error('WebTorrent client is not available');
     }
 
-    const { magnet, name } = options;
+    let { magnet, name } = options;
+
+    // If a direct .torrent file URL was provided, fetch and parse it to a magnet URI
+    if (magnet.startsWith('http://') || magnet.startsWith('https://')) {
+      try {
+        const parseTorrentModule: any = await import('parse-torrent');
+        const parseTorrent = parseTorrentModule.default || parseTorrentModule;
+        const toMagnetURI = parseTorrentModule.toMagnetURI;
+
+        const res = await fetch(magnet, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+          }
+        });
+        if (res.ok) {
+          const buf = new Uint8Array(await res.arrayBuffer());
+          const parsed = await parseTorrent(buf);
+          if (toMagnetURI) {
+            magnet = toMagnetURI(parsed);
+          }
+          if (!name && parsed.name) {
+            name = parsed.name;
+          }
+        }
+      } catch (torErr: any) {
+        loggerService.warn('TORRENT_SERVICE', `Could not parse torrent URL to magnet: ${torErr?.message}`);
+      }
+    }
+
     const settings = storageService.getSettings();
     const downloadDir = options.destination || settings.downloadDirectory || app.getPath('downloads');
 

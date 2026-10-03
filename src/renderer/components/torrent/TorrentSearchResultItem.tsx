@@ -63,6 +63,13 @@ export const TorrentSearchResultItem: React.FC<Props> = ({ item }) => {
         border: '1px solid rgba(14, 165, 233, 0.3)'
       };
     }
+    if (source.includes('TorrentMac')) {
+      return {
+        bg: 'rgba(244, 63, 94, 0.12)',
+        color: '#fb7185',
+        border: '1px solid rgba(244, 63, 94, 0.3)'
+      };
+    }
     return {
       bg: 'rgba(168, 85, 247, 0.12)',
       color: '#c084fc',

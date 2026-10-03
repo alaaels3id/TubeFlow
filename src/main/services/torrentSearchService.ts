@@ -200,6 +200,196 @@ export class TorrentSearchService {
     return [];
   }
 
+  public async searchTorrentMac(query: string, category: string = 'all'): Promise<TorrentSearchResult[]> {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+
+    let searchUrl = `https://www.torrentmac.net/?s=${encodeURIComponent(trimmed)}`;
+    if (category === 'games') {
+      searchUrl = `https://www.torrentmac.net/category/games/?s=${encodeURIComponent(trimmed)}`;
+    } else if (category === 'apps') {
+      searchUrl = `https://www.torrentmac.net/category/apps/?s=${encodeURIComponent(trimmed)}`;
+    }
+
+    try {
+      loggerService.info('TORRENT_SEARCH', `Searching TorrentMac for "${trimmed}" (category: ${category})`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 9000);
+
+      const res = await fetch(searchUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        throw new Error(`TorrentMac returned status ${res.status}`);
+      }
+
+      const html = await res.text();
+      if (html.includes('No Results Found')) {
+        return [];
+      }
+
+      const articleMatches = [...html.matchAll(/<article[^>]*>([\s\S]*?)<\/article>/gi)].slice(0, 10);
+      if (articleMatches.length === 0) {
+        return [];
+      }
+
+      const items: Array<{
+        link: string;
+        title: string;
+        poster?: string;
+        date?: string;
+        categoriesRaw: string;
+      }> = [];
+
+      for (const match of articleMatches) {
+        const art = match[1];
+        const linkMatch = art.match(/<h2 class="post-title">\s*<a href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+        if (!linkMatch) continue;
+
+        const link = linkMatch[1];
+        const rawTitle = linkMatch[2].replace(/<[^>]+>/g, '').trim();
+        const imgMatch =
+          art.match(/class="home-thumb"[^>]*><img[^>]+src="([^"]+)"/i) ||
+          art.match(/<img[^>]+src="([^"]+)"[^>]*class="[^"]*attachment-thumbnail/i);
+        const dateMatch = art.match(/<time datetime="([^"]+)">([^<]+)<\/time>/i);
+        const categoryMatch = art.match(/<i class="fa fa-folder-open"><\/i>\s*<span>([\s\S]*?)<\/span>/i);
+
+        items.push({
+          link,
+          title: rawTitle,
+          poster: imgMatch ? imgMatch[1] : undefined,
+          date: dateMatch ? dateMatch[2].trim() : undefined,
+          categoriesRaw: categoryMatch ? categoryMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : ''
+        });
+      }
+
+      const parseTorrentModule: any = await import('parse-torrent');
+      const parseTorrent = parseTorrentModule.default || parseTorrentModule;
+      const toMagnetURI = parseTorrentModule.toMagnetURI;
+
+      const settled = await Promise.allSettled(
+        items.map(async (item) => {
+          const pageController = new AbortController();
+          const pageTimeout = setTimeout(() => pageController.abort(), 6000);
+
+          try {
+            const pRes = await fetch(item.link, {
+              signal: pageController.signal,
+              headers: {
+                'User-Agent':
+                  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+              }
+            });
+            clearTimeout(pageTimeout);
+
+            if (!pRes.ok) return null;
+            const pHtml = await pRes.text();
+
+            const torrentMatch =
+              pHtml.match(/href="([^"]+wp-content\/uploads\/[^"]+\.torrent)"/i) ||
+              pHtml.match(/href="([^"]+\.torrent)"/i);
+            const sizeMatch =
+              pHtml.match(/"fileSize":"([^"]+)"/i) ||
+              pHtml.match(/class="tm-metric__value"[^>]*>([\s\S]*?)<\/span>/i);
+
+            let formattedSize = sizeMatch ? sizeMatch[1].trim() : 'Unknown';
+            let size = 0;
+            let infoHash = '';
+            let magnet = '';
+            let name = item.title;
+
+            if (torrentMatch) {
+              const torUrl = torrentMatch[1];
+              const fileController = new AbortController();
+              const fileTimeout = setTimeout(() => fileController.abort(), 5000);
+
+              try {
+                const tRes = await fetch(torUrl, {
+                  signal: fileController.signal,
+                  headers: {
+                    'User-Agent':
+                      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                  }
+                });
+                clearTimeout(fileTimeout);
+
+                if (tRes.ok) {
+                  const buf = new Uint8Array(await tRes.arrayBuffer());
+                  const parsed = await parseTorrent(buf);
+                  infoHash = (parsed.infoHash || '').toLowerCase();
+                  magnet = toMagnetURI ? toMagnetURI(parsed) : this.createMagnetUri(infoHash, parsed.name || name);
+                  size = parsed.length || 0;
+                  if (parsed.name) name = parsed.name;
+                }
+              } catch {
+                magnet = torUrl;
+              }
+            }
+
+            if (!magnet && !infoHash) {
+              return null;
+            }
+
+            const isGame = item.categoriesRaw.toLowerCase().includes('game') || category === 'games';
+            const group: TorrentCategory = isGame ? 'games' : 'apps';
+
+            const result: TorrentSearchResult = {
+              id: `tm-${infoHash || Math.random().toString(36).substring(2, 9)}`,
+              name,
+              infoHash,
+              magnet,
+              size,
+              formattedSize: size > 0 ? this.formatSize(size) : formattedSize,
+              seeders: 25,
+              leechers: 3,
+              category: isGame ? 'Mac Game' : 'Mac App',
+              categoryGroup: group,
+              added: item.date,
+              source: 'TorrentMac',
+              poster: item.poster
+            };
+
+            return result;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const results: TorrentSearchResult[] = [];
+      for (const r of settled) {
+        if (r.status === 'fulfilled' && r.value) {
+          results.push(r.value);
+        }
+      }
+
+      return results;
+    } catch (err: any) {
+      loggerService.error('TORRENT_SEARCH', `Error searching TorrentMac: ${err.message}`);
+      return [];
+    }
+  }
+
+  private deduplicateTorrents(list: TorrentSearchResult[]): TorrentSearchResult[] {
+    const seen = new Set<string>();
+    const deduped: TorrentSearchResult[] = [];
+
+    for (const item of list) {
+      const key = item.infoHash || item.id;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.push(item);
+      }
+    }
+
+    return deduped;
+  }
+
   public async search(query: string, category: string = 'all', provider: string = 'all'): Promise<TorrentSearchResult[]> {
     const trimmed = query.trim();
     if (!trimmed) return [];
@@ -257,8 +447,12 @@ export class TorrentSearchService {
       return await this.searchApibay(trimmed, category);
     }
 
-    // Default 'all': Search both if movie-related or all
-    if (category === 'movies' || category === 'all') {
+    if (provider === 'torrentmac') {
+      return await this.searchTorrentMac(trimmed, category);
+    }
+
+    // Default 'all':
+    if (category === 'movies') {
       const [apibayRes, ytsRes] = await Promise.allSettled([
         this.searchApibay(trimmed, category),
         this.searchYTS(trimmed)
@@ -266,24 +460,32 @@ export class TorrentSearchService {
 
       const ytsList = ytsRes.status === 'fulfilled' ? ytsRes.value : [];
       const apibayList = apibayRes.status === 'fulfilled' ? apibayRes.value : [];
-
-      // Combine YTS first (usually higher quality / seeded), then Apibay
-      const combined = [...ytsList, ...apibayList];
-      const seen = new Set<string>();
-      const deduped: TorrentSearchResult[] = [];
-
-      for (const item of combined) {
-        if (!seen.has(item.infoHash)) {
-          seen.add(item.infoHash);
-          deduped.push(item);
-        }
-      }
-
-      return deduped;
+      return this.deduplicateTorrents([...ytsList, ...apibayList]);
     }
 
-    // For non-movie categories (apps, games, music), apibay is the only applicable provider
-    return await this.searchApibay(trimmed, category);
+    if (category === 'apps' || category === 'games') {
+      const [torrentmacRes, apibayRes] = await Promise.allSettled([
+        this.searchTorrentMac(trimmed, category),
+        this.searchApibay(trimmed, category)
+      ]);
+
+      const tmList = torrentmacRes.status === 'fulfilled' ? torrentmacRes.value : [];
+      const apibayList = apibayRes.status === 'fulfilled' ? apibayRes.value : [];
+      return this.deduplicateTorrents([...tmList, ...apibayList]);
+    }
+
+    // For general 'all' searches: query YTS, TorrentMac, and PirateBay in parallel
+    const [ytsRes, torrentmacRes, apibayRes] = await Promise.allSettled([
+      this.searchYTS(trimmed),
+      this.searchTorrentMac(trimmed, category),
+      this.searchApibay(trimmed, category)
+    ]);
+
+    const ytsList = ytsRes.status === 'fulfilled' ? ytsRes.value : [];
+    const tmList = torrentmacRes.status === 'fulfilled' ? torrentmacRes.value : [];
+    const apibayList = apibayRes.status === 'fulfilled' ? apibayRes.value : [];
+
+    return this.deduplicateTorrents([...ytsList, ...tmList, ...apibayList]);
   }
 }
 

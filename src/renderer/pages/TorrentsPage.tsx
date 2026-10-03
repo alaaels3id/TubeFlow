@@ -70,8 +70,9 @@ export const TorrentsPage: React.FC = () => {
 
   const providers: { id: TorrentProvider; label: string }[] = [
     { id: 'all', label: 'All Sources' },
-    { id: 'yts', label: 'YTS (YIFY)' },
-    { id: 'thepiratebay', label: 'ThePirateBay' }
+    { id: 'torrentmac', label: 'TorrentMac' },
+    { id: 'thepiratebay', label: 'ThePirateBay' },
+    { id: 'yts', label: 'YTS (YIFY)' }
   ];
 
   // Calculate total download speed

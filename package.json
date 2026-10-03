@@ -14,7 +14,8 @@
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist:linux": "npm run build && electron-builder --linux",
-    "release": "bash scripts/release.sh"
+    "release": "bash scripts/release.sh",
+    "postinstall": "node scripts/patch-uint8-util.cjs"
   },
   "build": {
     "appId": "com.tubeflow.desktop",
