@@ -15,19 +15,137 @@ interface ActiveProcess {
 }
 
 
-function isDirectFileUrl(url: string): boolean {
+export const DIRECT_FILE_EXTENSIONS = new Set([
+  // Archives & Compressed
+  'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz', 'tbz2', 'zst', 'iso', 'cab', 'dmg', 'lz', 'lzma',
+  // Installers & Executables & Packages
+  'exe', 'msi', 'pkg', 'deb', 'rpm', 'apk', 'bin', 'run', 'appimage', 'jar',
+  // Documents & eBooks
+  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'epub', 'mobi', 'azw3', 'odt', 'ods', 'odp',
+  // Audio files
+  'mp3', 'flac', 'wav', 'aac', 'ogg', 'm4a', 'opus', 'wma', 'aiff', 'alac',
+  // Direct Video files (direct downloads)
+  'mp4', 'mkv', 'webm', 'avi', 'mov', 'flv', 'wmv', 'm4v', '3gp',
+  // Images
+  'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'psd',
+  // Data & Code
+  'json', 'xml', 'sql', 'sqlite', 'db', 'torrent'
+]);
+
+export function detectFileExtension(url: string, title?: string): string | null {
+  if (title) {
+    const cleanTitle = title.split('?')[0].split('#')[0].trim();
+    const lastDot = cleanTitle.lastIndexOf('.');
+    if (lastDot !== -1 && lastDot < cleanTitle.length - 1) {
+      const ext = cleanTitle.slice(lastDot + 1).toLowerCase();
+      if (ext.length >= 1 && ext.length <= 10 && /^[a-z0-9]+$/i.test(ext)) {
+        return ext;
+      }
+    }
+  }
+
   try {
-    const pathname = new URL(url).pathname.toLowerCase();
-    const directExts = [
-      '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz',
-      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-      '.iso', '.dmg', '.exe', '.msi', '.pkg', '.deb', '.rpm', '.apk',
-      '.bin', '.csv', '.txt'
-    ];
-    return directExts.some((ext) => pathname.endsWith(ext));
-  } catch {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname;
+    const lastSlash = pathname.lastIndexOf('/');
+    const filenameFromPath = lastSlash !== -1 ? pathname.slice(lastSlash + 1) : pathname;
+    const lastDot = filenameFromPath.lastIndexOf('.');
+    if (lastDot !== -1 && lastDot < filenameFromPath.length - 1) {
+      const ext = filenameFromPath.slice(lastDot + 1).toLowerCase();
+      if (ext.length >= 1 && ext.length <= 10 && /^[a-z0-9]+$/i.test(ext)) {
+        return ext;
+      }
+    }
+
+    for (const [key, val] of parsed.searchParams.entries()) {
+      if (key.toLowerCase().includes('file') || key.toLowerCase().includes('name')) {
+        const lastDotParam = val.lastIndexOf('.');
+        if (lastDotParam !== -1 && lastDotParam < val.length - 1) {
+          const ext = val.slice(lastDotParam + 1).toLowerCase();
+          if (ext.length >= 1 && ext.length <= 10 && /^[a-z0-9]+$/i.test(ext)) {
+            return ext;
+          }
+        }
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+export function isDirectFile(url: string, title?: string, type?: string): boolean {
+  if (type === 'file') return true;
+  if (!url) return false;
+
+  const isVideoPlatform = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|twitter\.com|x\.com|facebook\.com|fb\.watch|instagram\.com|twitch\.tv|dailymotion\.com|soundcloud\.com|bilibili\.com)/i.test(url);
+  if (isVideoPlatform) {
     return false;
   }
+
+  const ext = detectFileExtension(url, title);
+  if (ext && DIRECT_FILE_EXTENSIONS.has(ext)) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(url);
+    const lastPart = parsed.pathname.split('/').pop() || '';
+    if (lastPart.includes('.')) {
+      const parts = lastPart.split('.');
+      const potentialExt = parts[parts.length - 1].toLowerCase();
+      if (potentialExt && potentialExt.length <= 8 && /^[a-z0-9]+$/i.test(potentialExt)) {
+        return true;
+      }
+    }
+  } catch {}
+
+  return false;
+}
+
+export function isDirectFileUrl(url: string): boolean {
+  return isDirectFile(url);
+}
+
+export function parseContentDispositionFilename(header: string | null | undefined): string | null {
+  if (!header) return null;
+  const utf8Match = header.match(/filename\*\s*=\s*(?:UTF-8|utf-8)''([^;]+)/i);
+  if (utf8Match && utf8Match[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim());
+    } catch {
+      return utf8Match[1].trim();
+    }
+  }
+  const standardMatch = header.match(/filename\s*=\s*(?:"([^"]+)"|'([^']+)'|([^;\s]+))/i);
+  if (standardMatch) {
+    const raw = standardMatch[1] || standardMatch[2] || standardMatch[3];
+    if (raw) {
+      try {
+        return decodeURIComponent(raw.trim());
+      } catch {
+        return raw.trim();
+      }
+    }
+  }
+  return null;
+}
+
+export function getFilenameFromUrl(url: string, defaultName: string = 'download'): string {
+  try {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname;
+    const lastSlash = pathname.lastIndexOf('/');
+    if (lastSlash !== -1 && lastSlash < pathname.length - 1) {
+      const decoded = decodeURIComponent(pathname.slice(lastSlash + 1));
+      if (decoded && decoded !== '/') return sanitizeFilename(decoded);
+    }
+    for (const [key, val] of parsed.searchParams.entries()) {
+      if ((key.toLowerCase().includes('file') || key.toLowerCase().includes('name')) && val) {
+        return sanitizeFilename(decodeURIComponent(val));
+      }
+    }
+  } catch {}
+  return defaultName;
 }
 
 export class DownloadService {
@@ -74,8 +192,8 @@ export class DownloadService {
     title: string;
     thumbnail: string;
     channel?: string;
-    quality: string;
-    format: 'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus';
+    quality?: string;
+    format?: string;
     destination?: string;
     playlistId?: string;
     playlistTitle?: string;
@@ -115,16 +233,33 @@ export class DownloadService {
       }
     }
 
-    // Prevent duplicate download jobs if the same video is already pending or downloading in the destination
+    // Determine if this is a direct non-video file or general file
+    const isDirect = options.type === 'file' || isDirectFile(options.url, options.title, options.type);
+    const jobType: 'video' | 'playlist-item' | 'file' = isDirect ? 'file' : options.type;
+
+    const detectedExt = detectFileExtension(options.url, options.title);
+    const jobFormat = isDirect
+      ? (detectedExt || (options.format && options.format !== 'mp4' ? options.format : 'file'))
+      : (options.format || settings.defaultFormat || 'mp4');
+
+    // Never assign video quality like 1080p to a non-video direct file
+    const jobQuality = isDirect
+      ? ''
+      : (options.quality || settings.defaultQuality || '1080p');
+
+    const jobTitle = options.title && options.title !== 'Download' && options.title !== 'download'
+      ? options.title
+      : getFilenameFromUrl(options.url, 'Download');
+
+    // Prevent duplicate download jobs if the same video or file is already pending or downloading in the destination
     const existingJob = this.queue.find(
       (j) =>
         (j.status === 'pending' || j.status === 'downloading') &&
         j.url === options.url &&
-        j.format === (options.format || settings.defaultFormat || 'mp4') &&
         j.destination === destDir
     );
     if (existingJob) {
-      console.log(`[DOWNLOAD] Skipping duplicate download for: ${options.title} (already in queue with id: ${existingJob.id})`);
+      console.log(`[DOWNLOAD] Skipping duplicate download for: ${jobTitle} (already in queue with id: ${existingJob.id})`);
       return existingJob.id;
     }
 
@@ -134,16 +269,16 @@ export class DownloadService {
     const job: DownloadJob = {
       id: jobId,
       url: options.url,
-      type: options.type,
+      type: jobType,
       playlistId: options.playlistId,
       playlistTitle: options.playlistTitle,
       playlistIndex: options.playlistIndex,
       filesizeApprox: options.filesizeApprox || options.totalBytes,
-      title: options.title,
+      title: jobTitle,
       thumbnail: options.thumbnail,
       channel: options.channel,
-      quality: options.quality || settings.defaultQuality || '1080p',
-      format: options.format || settings.defaultFormat || 'mp4',
+      quality: jobQuality,
+      format: jobFormat,
       destination: destDir,
       status: 'pending',
       progress: 0,
@@ -179,7 +314,7 @@ export class DownloadService {
   }
 
   private executeJob(job: DownloadJob): void {
-    if (job.type === 'file' || isDirectFileUrl(job.url)) {
+    if (job.type === 'file' || isDirectFile(job.url, job.title, job.type)) {
       this.executeDirectFileJob(job);
       return;
     }
@@ -521,6 +656,346 @@ export class DownloadService {
     });
   }
 
+  private async executeDirectFileJob(job: DownloadJob): Promise<void> {
+    const settings = storageService.getSettings();
+    job.status = 'downloading';
+    this.emitProgress(job);
+
+    const abortController = new AbortController();
+    const activeItem: ActiveProcess = { job, abortController };
+    this.activeProcesses.set(job.id, activeItem);
+
+    const tempDir = path.join(job.destination, '.tubeflow-temp');
+    try {
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+    } catch (e) {
+      console.error('Failed to create tempDir:', e);
+    }
+
+    const tempFilePath = path.join(tempDir, `${job.id}.part`);
+    let fileStream: fs.WriteStream | null = null;
+
+    try {
+      let existingBytes = 0;
+      if (fs.existsSync(tempFilePath)) {
+        try {
+          existingBytes = fs.statSync(tempFilePath).size;
+        } catch {
+          existingBytes = 0;
+        }
+      }
+
+      // Prepare request headers with browser user-agent and optional range
+      let headers: Record<string, string> = {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Encoding': 'identity'
+      };
+
+      if (existingBytes > 0) {
+        headers['Range'] = `bytes=${existingBytes}-`;
+      }
+
+      let response: Response;
+      try {
+        response = await fetch(job.url, {
+          headers,
+          signal: abortController.signal,
+          redirect: 'follow'
+        });
+      } catch (fetchErr: any) {
+        if (activeItem.killedIntentional) {
+          return;
+        }
+        throw fetchErr;
+      }
+
+      if (activeItem.killedIntentional) {
+        return;
+      }
+
+      // If server returned 416 (Range not satisfiable), restart download from 0
+      if (response.status === 416 && existingBytes > 0) {
+        try {
+          fs.unlinkSync(tempFilePath);
+        } catch {}
+        existingBytes = 0;
+        delete headers['Range'];
+        response = await fetch(job.url, {
+          headers,
+          signal: abortController.signal,
+          redirect: 'follow'
+        });
+      }
+
+      if (!response.ok && response.status !== 206) {
+        throw new Error(`Server returned HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const isPartial = response.status === 206;
+      const startByte = isPartial ? existingBytes : 0;
+      fileStream = fs.createWriteStream(tempFilePath, { flags: isPartial ? 'a' : 'w' });
+
+      // Parse metadata from response headers
+      const contentDisposition = response.headers.get('content-disposition');
+      const filenameFromHeader = parseContentDispositionFilename(contentDisposition);
+      if (filenameFromHeader) {
+        job.title = sanitizeFilename(filenameFromHeader);
+        const ext = path.extname(filenameFromHeader).replace('.', '').toLowerCase();
+        if (ext) job.format = ext;
+      } else if (!job.title || job.title === 'Download' || job.title === 'download') {
+        const urlToInspect = response.url || job.url;
+        try {
+          const u = new URL(urlToInspect);
+          const p = u.pathname;
+          const leaf = decodeURIComponent(p.substring(p.lastIndexOf('/') + 1));
+          if (leaf) {
+            job.title = sanitizeFilename(leaf);
+            const ext = path.extname(leaf).replace('.', '').toLowerCase();
+            if (ext) job.format = ext;
+          }
+        } catch {}
+      }
+
+      // Content length / total bytes estimation
+      const clHeader = response.headers.get('content-length');
+      let contentLength = clHeader ? parseInt(clHeader, 10) : 0;
+      if (isNaN(contentLength)) contentLength = 0;
+
+      let totalBytes = 0;
+      if (isPartial) {
+        const crHeader = response.headers.get('content-range');
+        if (crHeader) {
+          const match = crHeader.match(/\/(\d+|\*)/);
+          if (match && match[1] !== '*') {
+            totalBytes = parseInt(match[1], 10);
+          }
+        }
+        if (!totalBytes && contentLength > 0) {
+          totalBytes = startByte + contentLength;
+        }
+      } else {
+        totalBytes = contentLength;
+      }
+
+      if (totalBytes > 0) {
+        job.totalBytes = totalBytes;
+        job.filesizeApprox = totalBytes;
+      }
+
+      // Streaming data & tracking progress
+      let downloaded = startByte;
+      job.downloadedBytes = downloaded;
+      if (job.totalBytes > 0) {
+        job.progress = Math.min(99, Math.round((downloaded / job.totalBytes) * 100));
+      }
+      this.emitProgress(job);
+
+      let emaSpeed = 0;
+      let lastBytes = downloaded;
+      let lastTime = Date.now();
+      let lastEmitTime = Date.now();
+
+      if (!response.body) {
+        throw new Error('Response body stream is empty');
+      }
+
+      const reader = response.body.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+
+        if (activeItem.killedIntentional) {
+          try {
+            await reader.cancel();
+          } catch {}
+          fileStream.close();
+          return;
+        }
+
+        const canContinue = fileStream.write(value);
+        if (!canContinue) {
+          await new Promise<void>((resolve) => fileStream?.once('drain', () => resolve()));
+        }
+
+        downloaded += value.length;
+        job.downloadedBytes = downloaded;
+
+        if (job.totalBytes > 0) {
+          job.progress = Math.min(99, Math.round((downloaded / job.totalBytes) * 100));
+        }
+
+        const now = Date.now();
+        const elapsed = now - lastTime;
+        if (elapsed >= 500) {
+          const bytesDiff = downloaded - lastBytes;
+          const instantSpeed = Math.round((bytesDiff / elapsed) * 1000);
+          emaSpeed = emaSpeed === 0 ? instantSpeed : Math.round(0.3 * instantSpeed + 0.7 * emaSpeed);
+          job.speed = emaSpeed;
+
+          if (job.totalBytes > downloaded && emaSpeed > 0) {
+            job.remainingSeconds = Math.round((job.totalBytes - downloaded) / emaSpeed);
+          }
+
+          lastBytes = downloaded;
+          lastTime = now;
+        }
+
+        if (now - lastEmitTime >= 250) {
+          this.emitProgress(job);
+          lastEmitTime = now;
+        }
+      }
+
+      // Finalize file stream
+      await new Promise<void>((resolve, reject) => {
+        if (!fileStream) return resolve();
+        fileStream.end((err?: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      if (activeItem.killedIntentional) {
+        return;
+      }
+
+      this.activeProcesses.delete(job.id);
+
+      // Final filename & destination duplicate resolution
+      let finalFilename = sanitizeFilename(job.title || 'download');
+      const ext = path.extname(finalFilename);
+      if (!ext && job.format && job.format !== 'file') {
+        finalFilename = `${finalFilename}.${job.format}`;
+      }
+
+      let finalPath = path.join(job.destination, finalFilename);
+
+      if (fs.existsSync(finalPath)) {
+        if (settings.duplicateAction === 'skip') {
+          try { fs.unlinkSync(tempFilePath); } catch {}
+          job.status = 'completed';
+          job.progress = 100;
+          job.speed = 0;
+          job.remainingSeconds = 0;
+          job.filePath = finalPath;
+          this.emitProgress(job);
+          if (this.onCompletedCallback) this.onCompletedCallback(job);
+          this.processNextInQueue();
+          return;
+        } else if (settings.duplicateAction === 'replace') {
+          try { fs.unlinkSync(finalPath); } catch {}
+        } else {
+          // copy: generate unique name "name (1).ext"
+          const parsed = path.parse(finalFilename);
+          let counter = 1;
+          while (fs.existsSync(path.join(job.destination, `${parsed.name} (${counter})${parsed.ext}`))) {
+            counter++;
+          }
+          finalFilename = `${parsed.name} (${counter})${parsed.ext}`;
+          finalPath = path.join(job.destination, finalFilename);
+        }
+      }
+
+      // Move temp file to final destination atomically
+      try {
+        fs.renameSync(tempFilePath, finalPath);
+      } catch (moveErr: any) {
+        if (moveErr.code === 'EXDEV') {
+          fs.copyFileSync(tempFilePath, finalPath);
+          try { fs.unlinkSync(tempFilePath); } catch {}
+        } else {
+          throw moveErr;
+        }
+      }
+
+      job.filePath = finalPath;
+      job.status = 'completed';
+      job.progress = 100;
+      job.speed = 0;
+      job.remainingSeconds = 0;
+      job.downloadedBytes = job.totalBytes > 0 ? job.totalBytes : downloaded;
+      job.completedAt = new Date().toISOString();
+
+      this.emitProgress(job);
+      if (this.onCompletedCallback) this.onCompletedCallback(job);
+
+      // Save to history
+      storageService.addHistoryItem({
+        id: job.id,
+        url: job.url,
+        type: 'file',
+        title: job.title,
+        thumbnail: job.thumbnail,
+        channel: job.channel,
+        quality: '',
+        format: job.format,
+        fileSize: job.downloadedBytes,
+        filePath: job.filePath,
+        status: 'completed',
+        downloadDate: new Date().toISOString()
+      });
+
+      // Notification
+      const isArabic = settings.language === 'ar';
+      const notifTitle = isArabic ? 'اكتمل التحميل بنجاح 🎉' : 'Download Completed 🎉';
+      const notifBody = isArabic
+        ? `اسم الملف: ${job.title}`
+        : `File: ${job.title}`;
+      notificationService.notify(notifTitle, notifBody);
+
+      this.processNextInQueue();
+    } catch (err: any) {
+      if (fileStream) {
+        try { fileStream.close(); } catch {}
+      }
+
+      this.activeProcesses.delete(job.id);
+
+      if (activeItem.killedIntentional) {
+        return;
+      }
+
+      job.status = 'failed';
+      job.speed = 0;
+      job.remainingSeconds = 0;
+      job.errorMessage = err.name === 'AbortError'
+        ? 'Download was aborted'
+        : (err.message || 'Direct file download failed');
+
+      this.emitProgress(job);
+      if (this.onFailedCallback) this.onFailedCallback(job);
+
+      storageService.addHistoryItem({
+        id: job.id,
+        url: job.url,
+        type: 'file',
+        title: job.title,
+        thumbnail: job.thumbnail,
+        channel: job.channel,
+        quality: '',
+        format: job.format,
+        status: 'failed',
+        errorMessage: job.errorMessage,
+        downloadDate: new Date().toISOString()
+      });
+
+      const isArabic = settings.language === 'ar';
+      const notifTitle = isArabic ? 'فشل التحميل ❌' : 'Download Failed ❌';
+      const notifBody = isArabic
+        ? `فشل تحميل: ${job.title}`
+        : `Failed to download: ${job.title}`;
+      notificationService.notify(notifTitle, notifBody);
+
+      this.processNextInQueue();
+    }
+  }
+
   public pauseDownload(id: string): boolean {
     const active = this.activeProcesses.get(id);
     if (active) {
@@ -555,6 +1030,16 @@ export class DownloadService {
 
   public cancelDownload(id: string): boolean {
     const active = this.activeProcesses.get(id);
+    const job = active?.job || this.queue.find((j) => j.id === id);
+    if (job) {
+      try {
+        const tempFilePath = path.join(job.destination, '.tubeflow-temp', `${job.id}.part`);
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+        }
+      } catch {}
+    }
+
     if (active) {
       active.killedIntentional = true;
       if (active.abortController) active.abortController.abort(); if (active.process) active.process.kill('SIGKILL');
@@ -564,7 +1049,6 @@ export class DownloadService {
       this.processNextInQueue();
       return true;
     }
-    const job = this.queue.find((j) => j.id === id);
     if (job) {
       job.status = 'cancelled';
       this.emitProgress(job);
@@ -578,7 +1062,16 @@ export class DownloadService {
     if (job) {
       job.status = 'pending';
       job.progress = 0;
+      job.downloadedBytes = 0;
+      job.speed = 0;
+      job.remainingSeconds = 0;
       job.errorMessage = undefined;
+      try {
+        const tempFilePath = path.join(job.destination, '.tubeflow-temp', `${job.id}.part`);
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+        }
+      } catch {}
       this.emitProgress(job);
       this.processNextInQueue();
       return true;
@@ -587,6 +1080,15 @@ export class DownloadService {
   }
 
   public removeDownload(id: string): boolean {
+    const job = this.queue.find((j) => j.id === id);
+    if (job) {
+      try {
+        const tempFilePath = path.join(job.destination, '.tubeflow-temp', `${job.id}.part`);
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+        }
+      } catch {}
+    }
     this.cancelDownload(id);
     this.queue = this.queue.filter((j) => j.id !== id);
     return true;

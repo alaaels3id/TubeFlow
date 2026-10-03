@@ -5,6 +5,20 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] - 2026-10-03
+
+### 🐛 Bug Fixes & Improvements
+
+#### 📥 Direct File Downloader & Resolution Badge Fixes
+- **Robust Direct File Engine**: Implemented `executeDirectFileJob` in `DownloadService` enabling native, high-speed HTTP/HTTPS downloads for non-video files (`.zip`, `.dmg`, `.pkg`, `.pdf`, `.exe`, `.tar`, `.iso`, etc.).
+- **Automatic Resume & Range Requests**: Added support for pausing and resuming downloads via HTTP `Range: bytes=X-` headers and `.part` file preservation.
+- **Dynamic Filename & Metadata Resolution**: Automatic extraction of exact filenames via `Content-Disposition` (RFC 5987 / UTF-8) and `Content-Type` fallback.
+- **Suppressed 1080p Badge on Non-Videos**: Resolved bug where non-video files inherited `1080p` quality and `MP4` format; files now display their real extension (`ZIP`, `PDF`, `DMG`, etc.) with zero video quality badges.
+- **Type-Specific Icons**: Replaced generic icons with contextual Lucide icons (`FileArchive`, `FileText`, `Package`, `Music`, `Film`, `File`) in download and history lists.
+- **Dashboard Direct File Analyzer**: Added `FileCard` allowing direct URLs to be analyzed, inspected, and downloaded with one click from the dashboard.
+
+---
+
 ## [1.8.0] - 2026-09-26
 
 ### ✨ Features & Improvements

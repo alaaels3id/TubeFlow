@@ -1,5 +1,18 @@
 import React from 'react';
-import { ExternalLink, FolderOpen, Trash2, RotateCcw, HardDrive, Calendar } from 'lucide-react';
+import {
+  ExternalLink,
+  FolderOpen,
+  Trash2,
+  RotateCcw,
+  HardDrive,
+  Calendar,
+  FileArchive,
+  FileText,
+  Package,
+  Music,
+  Film,
+  File
+} from 'lucide-react';
 import { HistoryItem as HistoryItemType } from '@shared/types';
 import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useQueueStore } from '../../stores/useQueueStore';
@@ -27,14 +40,63 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({ item }) => {
   const handleRetry = async () => {
     await addJob({
       url: item.url,
-      type: item.type === 'playlist' ? 'playlist-item' : 'video',
+      type: item.type === 'file' ? 'file' : (item.type === 'playlist' ? 'playlist-item' : 'video'),
       title: item.title,
       thumbnail: item.thumbnail,
       channel: item.channel,
-      quality: item.quality,
-      format: (item.format as any) || 'mp4'
+      quality: item.type === 'file' ? '' : item.quality,
+      format: item.format || (item.type === 'file' ? 'file' : 'mp4')
     });
     setActiveTab('downloads');
+  };
+
+  const getFormatBadge = (): string => {
+    const titleMatch = (item.title || item.filePath || '').match(/\.([a-zA-Z0-9]{1,10})$/);
+    if (titleMatch && titleMatch[1]) {
+      return titleMatch[1].toUpperCase();
+    }
+    if (item.format && item.format !== 'file') {
+      return item.format.toUpperCase();
+    }
+    return item.type === 'file' ? 'FILE' : 'MP4';
+  };
+
+  const badgeFormat = getFormatBadge();
+  const lowerExt = badgeFormat.toLowerCase();
+
+  const nonVideoExts = [
+    'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso', 'cab', 'dmg',
+    'exe', 'msi', 'pkg', 'deb', 'rpm', 'apk', 'bin', 'run', 'appimage',
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'epub',
+    'torrent', 'file'
+  ];
+
+  const isNonVideo = item.type === 'file' || nonVideoExts.includes(lowerExt);
+
+  const shouldShowQuality = Boolean(
+    !isNonVideo &&
+    item.quality &&
+    !['file', 'direct', 'unknown', 'none'].includes(item.quality.toLowerCase()) &&
+    !nonVideoExts.includes(item.quality.toLowerCase())
+  );
+
+  const renderThumbnailIcon = () => {
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso', 'cab'].includes(lowerExt)) {
+      return <FileArchive size={22} color="var(--color-primary-400)" />;
+    }
+    if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'epub'].includes(lowerExt)) {
+      return <FileText size={22} color="var(--color-accent-400)" />;
+    }
+    if (['dmg', 'pkg', 'exe', 'msi', 'deb', 'rpm', 'apk', 'bin', 'appimage'].includes(lowerExt)) {
+      return <Package size={22} color="#f59e0b" />;
+    }
+    if (['mp3', 'flac', 'wav', 'aac', 'ogg', 'm4a', 'opus', 'wma'].includes(lowerExt) || item.quality === 'audio') {
+      return <Music size={22} color="#10b981" />;
+    }
+    if (['mp4', 'mkv', 'webm', 'avi', 'mov', 'flv'].includes(lowerExt) || item.type === 'video') {
+      return <Film size={22} color="var(--color-primary-400)" />;
+    }
+    return <File size={22} color="var(--text-muted)" />;
   };
 
   return (
@@ -68,7 +130,7 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({ item }) => {
                 color: 'var(--text-muted)'
               }}
             >
-              <HardDrive size={20} />
+              {renderThumbnailIcon()}
             </div>
           )}
         </div>
@@ -104,7 +166,7 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({ item }) => {
           >
             {item.channel && <span>{item.channel}</span>}
             <span className="badge badge-neutral" style={{ padding: '0 5px', fontSize: 10 }}>
-              {item.quality} • {item.format.toUpperCase()}
+              {shouldShowQuality ? `${item.quality} • ` : ''}{badgeFormat}
             </span>
             {item.fileSize ? <span>{formatBytes(item.fileSize)}</span> : null}
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

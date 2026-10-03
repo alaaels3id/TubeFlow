@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { BrowserWindow, app } from 'electron';
-import { downloadService } from './downloadService';
+import { downloadService, isDirectFile, detectFileExtension } from './downloadService';
 import { torrentService } from './torrentService';
 import { showNotification } from '../notifications';
 import { loggerService } from './loggerService';
@@ -96,14 +96,18 @@ export class BridgeService {
               }
             }
 
+            // Determine if direct non-video file or general file
+            const isDirect = isDirectFile(downloadUrl, title, data.type);
+            const detectedExt = detectFileExtension(downloadUrl, title);
+
             // Enqueue download via downloadService
             const jobId = await downloadService.startDownload({
               url: downloadUrl,
-              type: 'video', // will detect whether direct file or yt-dlp media
+              type: isDirect ? 'file' : (data.type || 'video'),
               title,
               thumbnail: data.thumbnail || '',
-              quality: data.quality || '1080p',
-              format: data.format || 'mp4'
+              quality: isDirect ? '' : (data.quality || '1080p'),
+              format: isDirect ? (detectedExt || data.format || 'file') : (data.format || 'mp4')
             });
 
             showNotification('Download Started', `TubeFlow started downloading: ${title}`, undefined, true);

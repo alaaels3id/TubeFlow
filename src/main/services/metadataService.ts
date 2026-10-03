@@ -5,9 +5,16 @@ import {
   FormatOption,
   PlaylistItem,
   PlaylistMetadata,
-  VideoMetadata
+  VideoMetadata,
+  FileMetadata
 } from '../../shared/types';
 import { formatDuration } from '../utils/sanitize';
+import {
+  isDirectFile,
+  detectFileExtension,
+  parseContentDispositionFilename,
+  getFilenameFromUrl
+} from './downloadService';
 
 export class MetadataService {
   public isPlaylistUrl(url: string): boolean {
@@ -28,6 +35,16 @@ export class MetadataService {
   public async analyze(url: string): Promise<AnalyzeResult> {
     const ytDlp = binaryService.getYtDlpPath();
     const isExplicitPlaylist = this.isPlaylistUrl(url);
+
+    // If it is directly identified as a file link (zip, dmg, pdf, etc.), analyze as file
+    if (isDirectFile(url)) {
+      try {
+        const file = await this.fetchFileMetadata(url);
+        return { type: 'file', file };
+      } catch (fileError) {
+        console.warn('Direct file metadata probe failed, attempting yt-dlp fallback:', fileError);
+      }
+    }
 
     if (isExplicitPlaylist) {
       try {
@@ -71,8 +88,76 @@ export class MetadataService {
         }
       }
 
+      // If video extraction failed and it's a generic HTTP/HTTPS link, attempt file extraction
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        try {
+          const file = await this.fetchFileMetadata(url);
+          if (file && (file.filesizeApprox || file.extension !== 'file')) {
+            return { type: 'file', file };
+          }
+        } catch {}
+      }
+
       throw this.formatHumanError(videoError);
     }
+  }
+
+  private async fetchFileMetadata(url: string): Promise<FileMetadata> {
+    let filename = getFilenameFromUrl(url);
+    let filesizeApprox: number | undefined = undefined;
+    let mimeType: string | undefined = undefined;
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(url, {
+        method: 'HEAD',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+          'Accept': '*/*'
+        },
+        signal: controller.signal,
+        redirect: 'follow'
+      });
+      clearTimeout(timeout);
+
+      const cd = res.headers.get('content-disposition');
+      const parsedCd = parseContentDispositionFilename(cd);
+      if (parsedCd) {
+        filename = parsedCd;
+      } else if (res.url) {
+        const urlName = getFilenameFromUrl(res.url);
+        if (urlName && urlName !== 'download') {
+          filename = urlName;
+        }
+      }
+
+      const cl = res.headers.get('content-length');
+      if (cl) {
+        const parsedSize = parseInt(cl, 10);
+        if (!isNaN(parsedSize) && parsedSize > 0) {
+          filesizeApprox = parsedSize;
+        }
+      }
+
+      const ct = res.headers.get('content-type');
+      if (ct) {
+        mimeType = ct.split(';')[0].trim().toLowerCase();
+      }
+    } catch {
+      // If HEAD fails, keep defaults from URL
+    }
+
+    const extension = detectFileExtension(url, filename) || 'file';
+
+    return {
+      url,
+      filename,
+      extension,
+      filesizeApprox,
+      mimeType
+    };
   }
 
   private fetchVideoMetadata(ytDlp: string, url: string): Promise<VideoMetadata> {

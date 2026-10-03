@@ -11,7 +11,13 @@ import {
   Clock,
   Zap,
   HardDrive,
-  RefreshCw
+  RefreshCw,
+  FileArchive,
+  FileText,
+  Package,
+  Music,
+  Film,
+  File
 } from 'lucide-react';
 import { DownloadJob } from '@shared/types';
 import { useQueueStore } from '../../stores/useQueueStore';
@@ -42,6 +48,57 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
   else if (isPaused) badgeClass = 'badge-warning';
 
   const effectiveTotal = job.totalBytes || job.filesizeApprox || 0;
+
+  // Determine accurate format badge and file type
+  const getFormatBadge = (): string => {
+    const titleMatch = (job.title || job.filePath || '').match(/\.([a-zA-Z0-9]{1,10})$/);
+    if (titleMatch && titleMatch[1]) {
+      return titleMatch[1].toUpperCase();
+    }
+    if (job.format && job.format !== 'file') {
+      return job.format.toUpperCase();
+    }
+    return job.type === 'file' ? 'FILE' : 'MP4';
+  };
+
+  const badgeFormat = getFormatBadge();
+  const lowerExt = badgeFormat.toLowerCase();
+
+  const nonVideoExts = [
+    'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso', 'cab', 'dmg',
+    'exe', 'msi', 'pkg', 'deb', 'rpm', 'apk', 'bin', 'run', 'appimage',
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'epub',
+    'torrent', 'file'
+  ];
+
+  const isNonVideo = job.type === 'file' || nonVideoExts.includes(lowerExt);
+
+  // Quality badge should ONLY be shown for genuine video/audio items with valid qualities (never on non-videos like zip/dmg/pdf)
+  const shouldShowQuality = Boolean(
+    !isNonVideo &&
+    job.quality &&
+    !['file', 'direct', 'unknown', 'none'].includes(job.quality.toLowerCase()) &&
+    !nonVideoExts.includes(job.quality.toLowerCase())
+  );
+
+  const renderThumbnailIcon = () => {
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso', 'cab'].includes(lowerExt)) {
+      return <FileArchive size={26} color="var(--color-primary-400)" />;
+    }
+    if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf', 'epub'].includes(lowerExt)) {
+      return <FileText size={26} color="var(--color-accent-400)" />;
+    }
+    if (['dmg', 'pkg', 'exe', 'msi', 'deb', 'rpm', 'apk', 'bin', 'appimage'].includes(lowerExt)) {
+      return <Package size={26} color="#f59e0b" />;
+    }
+    if (['mp3', 'flac', 'wav', 'aac', 'ogg', 'm4a', 'opus', 'wma'].includes(lowerExt) || job.quality === 'audio') {
+      return <Music size={26} color="#10b981" />;
+    }
+    if (['mp4', 'mkv', 'webm', 'avi', 'mov', 'flv'].includes(lowerExt) || job.type === 'video') {
+      return <Film size={26} color="var(--color-primary-400)" />;
+    }
+    return <File size={26} color="var(--text-muted)" />;
+  };
 
   return (
     <div className="card" style={{ padding: 16 }}>
@@ -75,7 +132,7 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
                 color: 'var(--text-muted)'
               }}
             >
-              <HardDrive size={24} />
+              {renderThumbnailIcon()}
             </div>
           )}
 
@@ -94,7 +151,7 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
               textTransform: 'uppercase'
             }}
           >
-            {job.format}
+            {badgeFormat}
           </span>
         </div>
 
@@ -179,7 +236,7 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({ job }) => {
                 </span>
               )}
 
-              {job.quality && (
+              {shouldShowQuality && (
                 <span className="badge badge-neutral" style={{ padding: '1px 6px', fontSize: 10 }}>
                   {job.quality}
                 </span>

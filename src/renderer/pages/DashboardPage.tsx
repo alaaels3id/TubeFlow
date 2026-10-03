@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { UrlAnalyzer } from '../components/dashboard/UrlAnalyzer';
 import { VideoCard } from '../components/dashboard/VideoCard';
 import { PlaylistView } from '../components/dashboard/PlaylistView';
+import { FileCard } from '../components/dashboard/FileCard';
 import { HistoryItem } from '../components/history/HistoryItem';
-import { VideoMetadata, PlaylistMetadata } from '@shared/types';
+import { VideoMetadata, PlaylistMetadata, FileMetadata } from '@shared/types';
 import { useHistoryStore } from '../stores/useHistoryStore';
 import { useQueueStore } from '../stores/useQueueStore';
 import { useI18n } from '../hooks/useI18n';
@@ -13,6 +14,7 @@ import { useAppStore } from '../stores/useAppStore';
 export const DashboardPage: React.FC = () => {
   const [analyzedVideo, setAnalyzedVideo] = useState<VideoMetadata | null>(null);
   const [analyzedPlaylist, setAnalyzedPlaylist] = useState<PlaylistMetadata | null>(null);
+  const [analyzedFile, setAnalyzedFile] = useState<FileMetadata | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const { history } = useHistoryStore();
@@ -24,6 +26,7 @@ export const DashboardPage: React.FC = () => {
     setIsLoading(true);
     setAnalyzedVideo(null);
     setAnalyzedPlaylist(null);
+    setAnalyzedFile(null);
 
     try {
       if (!window.api || !window.api.analyzeUrl) {
@@ -36,6 +39,8 @@ export const DashboardPage: React.FC = () => {
         setAnalyzedVideo(result.video);
       } else if (result.type === 'playlist' && result.playlist) {
         setAnalyzedPlaylist(result.playlist);
+      } else if (result.type === 'file' && result.file) {
+        setAnalyzedFile(result.file);
       }
     } finally {
       setIsLoading(false);
@@ -55,6 +60,9 @@ export const DashboardPage: React.FC = () => {
 
       {/* Playlist Details Card */}
       {analyzedPlaylist && <PlaylistView playlist={analyzedPlaylist} />}
+
+      {/* File Details Card */}
+      {analyzedFile && <FileCard file={analyzedFile} />}
 
       {/* Active downloads quick banner if running */}
       {activeJobs.length > 0 && (

@@ -9,12 +9,12 @@ interface QueueStore {
   initListeners: () => void;
   addJob: (options: {
     url: string;
-    type: 'video' | 'playlist-item';
+    type: 'video' | 'playlist-item' | 'file';
     title: string;
     thumbnail: string;
     channel?: string;
-    quality: string;
-    format: 'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus';
+    quality?: string;
+    format?: 'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus' | string;
     destination?: string;
     playlistId?: string;
     playlistTitle?: string;

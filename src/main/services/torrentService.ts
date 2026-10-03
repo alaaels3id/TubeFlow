@@ -1,14 +1,14 @@
 import { app } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
-import WebTorrent from 'webtorrent';
+import WebTorrent, { Torrent, TorrentFile } from 'webtorrent';
 import { TorrentJob, TorrentFileItem } from '../../shared/types';
 import { storageService } from './storageService';
 import { loggerService } from './loggerService';
 import { showNotification } from '../notifications';
 
 export class TorrentService {
-  private client: WebTorrent.Instance | null = null;
+  private client: WebTorrent | null = null;
   private jobs: Map<string, TorrentJob> = new Map();
   private onUpdateCallback: ((jobs: TorrentJob[]) => void) | null = null;
   private saveFile: string;
@@ -170,13 +170,13 @@ export class TorrentService {
     this.notifyUpdate();
 
     try {
-      this.client.add(magnet, { path: downloadDir }, (torrent: WebTorrent.Torrent) => {
+      this.client.add(magnet, { path: downloadDir }, (torrent: Torrent) => {
         job.infoHash = torrent.infoHash;
         if (torrent.name && !name) {
           job.name = torrent.name;
         }
         job.totalBytes = torrent.length || 0;
-        job.files = torrent.files.map((f: WebTorrent.TorrentFile) => ({
+        job.files = torrent.files.map((f: TorrentFile) => ({
           name: f.name,
           path: f.path,
           length: f.length,
@@ -198,7 +198,7 @@ export class TorrentService {
 
           // Update file item progress
           if (torrent.files && torrent.files.length) {
-            job.files = torrent.files.map((f: WebTorrent.TorrentFile) => ({
+            job.files = torrent.files.map((f: TorrentFile) => ({
               name: f.name,
               path: f.path,
               length: f.length,
@@ -270,7 +270,7 @@ export class TorrentService {
 
     if (this.client) {
       const torrent = this.client.torrents.find(
-        (t) => t.infoHash === job.infoHash || t.magnetURI === job.magnet
+        (t: any) => t.infoHash === job.infoHash || t.magnetURI === job.magnet
       );
       if (torrent) {
         torrent.pause();
@@ -291,7 +291,7 @@ export class TorrentService {
 
     if (this.client) {
       const torrent = this.client.torrents.find(
-        (t) => t.infoHash === job.infoHash || t.magnetURI === job.magnet
+        (t: any) => t.infoHash === job.infoHash || t.magnetURI === job.magnet
       );
       if (torrent) {
         torrent.resume();
@@ -323,7 +323,7 @@ export class TorrentService {
 
     if (this.client) {
       const torrent = this.client.torrents.find(
-        (t) => t.infoHash === job.infoHash || t.magnetURI === job.magnet
+        (t: any) => t.infoHash === job.infoHash || t.magnetURI === job.magnet
       );
       if (torrent) {
         try {

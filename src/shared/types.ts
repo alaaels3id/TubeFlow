@@ -78,8 +78,8 @@ export interface DownloadJob {
   thumbnail: string;
   channel?: string;
   duration?: number;
-  quality: string; // e.g. '1080p' or 'best' or 'audio'
-  format: 'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus';
+  quality: string; // e.g. '1080p' or 'best' or 'audio' or '' for direct files
+  format: 'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus' | string;
   destination: string;
   filePath?: string;
   status: DownloadStatus;
@@ -137,10 +137,19 @@ export interface SystemDependencies {
   };
 }
 
+export interface FileMetadata {
+  url: string;
+  filename: string;
+  extension: string;
+  filesizeApprox?: number;
+  mimeType?: string;
+}
+
 export interface AnalyzeResult {
   type: 'video' | 'playlist' | 'file';
   video?: VideoMetadata;
   playlist?: PlaylistMetadata;
+  file?: FileMetadata;
 }
 
 export type UpdateState =
