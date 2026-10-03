@@ -5,6 +5,16 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.4] - 2026-10-03
+
+### 🐛 Bug Fixes & Improvements
+
+#### 📺 Smart TV & Universal Media Player Compatibility (Samsung, LG, Sony)
+- **H.264 (AVC) + AAC Stream Prioritization**: Configured YouTube download engine to explicitly request native H.264 (`avc1`) video and AAC (`mp4a`) audio streams for all MP4 downloads and playlists, avoiding unsupported AV1 (`av01`) and Opus codecs that cause playback errors on Samsung Smart TVs (Series 5 and others).
+- **Faststart (`+faststart`) Atom Relocation**: Automatically repositions the MP4 `moov` index atom to the beginning of the video file, allowing smart TV media players, USB drives, and streaming clients to read metadata and start playback immediately.
+
+---
+
 ## [1.8.3] - 2026-10-03
 
 ### 🐛 Bug Fixes & Improvements
