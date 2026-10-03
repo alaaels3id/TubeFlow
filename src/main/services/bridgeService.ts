@@ -72,7 +72,7 @@ export class BridgeService {
             loggerService.info('Bridge', `Received download request: ${downloadUrl}`);
 
             // Handle magnet or torrent URL
-            if (downloadUrl.startsWith('magnet:') || downloadUrl.endsWith('.torrent')) {
+            if (downloadUrl.startsWith('magnet:') || /\.torrent(\?.*)?$/i.test(downloadUrl) || downloadUrl.includes('.torrent')) {
               await torrentService.addTorrent({
                 magnet: downloadUrl,
                 destination: ''

@@ -7,6 +7,20 @@ import { storageService } from './storageService';
 import { loggerService } from './loggerService';
 import { showNotification } from '../notifications';
 
+const DEFAULT_TRACKERS = [
+  'udp://tracker.opentrackr.org:1337/announce',
+  'udp://open.stealth.si:80/announce',
+  'udp://tracker.torrent.eu.org:451/announce',
+  'udp://tracker.bittor.pw:1337/announce',
+  'udp://public.popcorn-tracker.org:6969/announce',
+  'udp://tracker.dler.org:6969/announce',
+  'udp://exodus.desync.com:6969',
+  'udp://open.demonii.com:1337/announce',
+  'udp://explodie.org:6969/announce',
+  'udp://tracker.openbittorrent.com:80',
+  'udp://tracker.coppersurfer.tk:6969'
+];
+
 export class TorrentService {
   private client: WebTorrent | null = null;
   private jobs: Map<string, TorrentJob> = new Map();
@@ -111,6 +125,104 @@ export class TorrentService {
     );
   }
 
+  private attachTorrentListeners(torrent: Torrent, job: TorrentJob, initialName?: string): void {
+    torrent.on('infoHash', () => {
+      job.infoHash = torrent.infoHash;
+      this.notifyUpdate();
+    });
+
+    torrent.on('wire', () => {
+      job.numPeers = torrent.numPeers;
+      this.notifyUpdate();
+    });
+
+    torrent.on('metadata', () => {
+      job.infoHash = torrent.infoHash;
+      if (torrent.name && (!initialName || initialName === 'Torrent Download')) {
+        job.name = torrent.name;
+      }
+      job.totalBytes = torrent.length || 0;
+      if (torrent.files && torrent.files.length) {
+        job.files = torrent.files.map((f: TorrentFile) => ({
+          name: f.name,
+          path: f.path,
+          length: f.length,
+          downloaded: f.downloaded,
+          progress: f.progress * 100
+        }));
+      }
+      this.notifyUpdate();
+      this.saveJobs();
+    });
+
+    torrent.on('download', () => {
+      job.progress = Math.round(torrent.progress * 1000) / 10;
+      job.downloadedBytes = torrent.downloaded;
+      job.totalBytes = torrent.length;
+      job.downloadSpeed = torrent.downloadSpeed;
+      job.uploadSpeed = torrent.uploadSpeed;
+      job.numPeers = torrent.numPeers;
+      job.eta = torrent.timeRemaining ? Math.round(torrent.timeRemaining / 1000) : 0;
+
+      // Update file item progress
+      if (torrent.files && torrent.files.length) {
+        job.files = torrent.files.map((f: TorrentFile) => ({
+          name: f.name,
+          path: f.path,
+          length: f.length,
+          downloaded: f.downloaded,
+          progress: Math.round(f.progress * 1000) / 10
+        }));
+      }
+
+      this.notifyUpdate();
+    });
+
+    torrent.on('upload', () => {
+      job.uploadSpeed = torrent.uploadSpeed;
+      this.notifyUpdate();
+    });
+
+    torrent.on('done', () => {
+      job.status = 'completed';
+      job.progress = 100;
+      job.downloadedBytes = torrent.length;
+      job.completedAt = new Date().toISOString();
+      job.downloadSpeed = 0;
+      job.eta = 0;
+
+      loggerService.info('TORRENT_SERVICE', `Completed torrent: ${job.name}`);
+      this.notifyUpdate();
+      this.saveJobs();
+
+      // Native desktop notification
+      showNotification('Torrent Download Completed', `${job.name} has been downloaded to Downloads.`);
+
+      // Record in download history
+      storageService.addHistoryItem({
+        id: job.id,
+        url: job.magnet,
+        type: 'video',
+        title: job.name,
+        thumbnail: '',
+        quality: 'Torrent',
+        format: 'torrent',
+        fileSize: job.totalBytes,
+        filePath: path.join(job.destination, torrent.name || ''),
+        status: 'completed',
+        downloadDate: new Date().toISOString()
+      });
+    });
+
+    torrent.on('error', (err: any) => {
+      job.status = 'error';
+      job.errorMessage = err?.message || 'Download error occurred';
+      loggerService.error('TORRENT_SERVICE', `Torrent error on ${job.name}: ${job.errorMessage}`);
+      this.notifyUpdate();
+      this.saveJobs();
+    });
+  }
+
   public async addTorrent(options: {
     magnet: string;
     name?: string;
@@ -198,90 +310,12 @@ export class TorrentService {
     this.notifyUpdate();
 
     try {
-      this.client.add(magnet, { path: downloadDir }, (torrent: Torrent) => {
-        job.infoHash = torrent.infoHash;
-        if (torrent.name && !name) {
-          job.name = torrent.name;
-        }
-        job.totalBytes = torrent.length || 0;
-        job.files = torrent.files.map((f: TorrentFile) => ({
-          name: f.name,
-          path: f.path,
-          length: f.length,
-          downloaded: f.downloaded,
-          progress: f.progress * 100
-        }));
-
-        this.notifyUpdate();
-        this.saveJobs();
-
-        torrent.on('download', () => {
-          job.progress = Math.round(torrent.progress * 1000) / 10;
-          job.downloadedBytes = torrent.downloaded;
-          job.totalBytes = torrent.length;
-          job.downloadSpeed = torrent.downloadSpeed;
-          job.uploadSpeed = torrent.uploadSpeed;
-          job.numPeers = torrent.numPeers;
-          job.eta = torrent.timeRemaining ? Math.round(torrent.timeRemaining / 1000) : 0;
-
-          // Update file item progress
-          if (torrent.files && torrent.files.length) {
-            job.files = torrent.files.map((f: TorrentFile) => ({
-              name: f.name,
-              path: f.path,
-              length: f.length,
-              downloaded: f.downloaded,
-              progress: Math.round(f.progress * 1000) / 10
-            }));
-          }
-
-          this.notifyUpdate();
-        });
-
-        torrent.on('upload', () => {
-          job.uploadSpeed = torrent.uploadSpeed;
-          this.notifyUpdate();
-        });
-
-        torrent.on('done', () => {
-          job.status = 'completed';
-          job.progress = 100;
-          job.downloadedBytes = torrent.length;
-          job.completedAt = new Date().toISOString();
-          job.downloadSpeed = 0;
-          job.eta = 0;
-
-          loggerService.info('TORRENT_SERVICE', `Completed torrent: ${job.name}`);
-          this.notifyUpdate();
-          this.saveJobs();
-
-          // Native desktop notification
-          showNotification('Torrent Download Completed', `${job.name} has been downloaded to Downloads.`);
-
-          // Record in download history
-          storageService.addHistoryItem({
-            id: job.id,
-            url: job.magnet,
-            type: 'video',
-            title: job.name,
-            thumbnail: '',
-            quality: 'Torrent',
-            format: 'torrent',
-            fileSize: job.totalBytes,
-            filePath: path.join(job.destination, torrent.name || ''),
-            status: 'completed',
-            downloadDate: new Date().toISOString()
-          });
-        });
-
-        torrent.on('error', (err: any) => {
-          job.status = 'error';
-          job.errorMessage = err?.message || 'Download error occurred';
-          loggerService.error('TORRENT_SERVICE', `Torrent error on ${job.name}: ${job.errorMessage}`);
-          this.notifyUpdate();
-          this.saveJobs();
-        });
+      const torrent = this.client.add(magnet, {
+        path: downloadDir,
+        announce: DEFAULT_TRACKERS
       });
+
+      this.attachTorrentListeners(torrent, job, name);
     } catch (e: any) {
       job.status = 'error';
       job.errorMessage = e?.message || 'Failed to start torrent';
@@ -317,28 +351,32 @@ export class TorrentService {
     const job = this.jobs.get(id);
     if (!job) return false;
 
-    if (this.client) {
-      const torrent = this.client.torrents.find(
-        (t: any) => t.infoHash === job.infoHash || t.magnetURI === job.magnet
-      );
-      if (torrent) {
-        torrent.resume();
-        job.status = 'downloading';
-        this.notifyUpdate();
-        this.saveJobs();
-        return true;
-      }
+    if (!this.client) {
+      this.initClient();
     }
 
-    // If client wasn't seeding/downloading, re-add it
+    if (!this.client) return false;
+
+    const existingTorrent = this.client.torrents.find(
+      (t: any) => t.infoHash === job.infoHash || t.magnetURI === job.magnet
+    );
+    if (existingTorrent) {
+      existingTorrent.resume();
+      job.status = 'downloading';
+      this.notifyUpdate();
+      this.saveJobs();
+      return true;
+    }
+
+    // If client wasn't seeding/downloading in memory, add it directly to WebTorrent client
     job.status = 'downloading';
     this.notifyUpdate();
     try {
-      await this.addTorrent({
-        magnet: job.magnet,
-        name: job.name,
-        destination: job.destination
+      const torrent = this.client.add(job.magnet, {
+        path: job.destination,
+        announce: DEFAULT_TRACKERS
       });
+      this.attachTorrentListeners(torrent, job, job.name);
       return true;
     } catch {
       return false;
