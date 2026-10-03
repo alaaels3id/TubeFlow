@@ -6,20 +6,7 @@ import { TorrentJob, TorrentFileItem } from '../../shared/types';
 import { storageService } from './storageService';
 import { loggerService } from './loggerService';
 import { showNotification } from '../notifications';
-
-const DEFAULT_TRACKERS = [
-  'udp://tracker.opentrackr.org:1337/announce',
-  'udp://open.stealth.si:80/announce',
-  'udp://tracker.torrent.eu.org:451/announce',
-  'udp://tracker.bittor.pw:1337/announce',
-  'udp://public.popcorn-tracker.org:6969/announce',
-  'udp://tracker.dler.org:6969/announce',
-  'udp://exodus.desync.com:6969',
-  'udp://open.demonii.com:1337/announce',
-  'udp://explodie.org:6969/announce',
-  'udp://tracker.openbittorrent.com:80',
-  'udp://tracker.coppersurfer.tk:6969'
-];
+import { DEFAULT_TRACKERS, DHT_BOOTSTRAP_NODES } from './torrentConstants';
 
 export class TorrentService {
   private client: WebTorrent | null = null;
@@ -27,20 +14,28 @@ export class TorrentService {
   private onUpdateCallback: ((jobs: TorrentJob[]) => void) | null = null;
   private saveFile: string;
   private throttleTimer: NodeJS.Timeout | null = null;
+  private heartbeatTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     const userData = app.getPath('userData');
     this.saveFile = path.join(userData, 'torrent_jobs.json');
     this.initClient();
     this.loadSavedJobs();
+    this.startHeartbeat();
   }
 
   private initClient(): void {
     try {
       this.client = new WebTorrent({
-        // Default torrent client options
-        maxConns: 55,
-        dht: true
+        maxConns: 300,
+        utp: true,
+        dht: {
+          bootstrap: DHT_BOOTSTRAP_NODES
+        },
+        lsd: true,
+        utPex: true,
+        natUpnp: true,
+        natPmp: true
       });
 
       this.client.on('error', (err: any) => {
@@ -48,6 +43,75 @@ export class TorrentService {
       });
     } catch (e: any) {
       loggerService.error('TORRENT_CLIENT', `Failed to initialize WebTorrent: ${e?.message || e}`);
+    }
+  }
+
+  private startHeartbeat(): void {
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = setInterval(() => {
+      this.tickActiveJobs();
+    }, 1000);
+  }
+
+  private tickActiveJobs(): void {
+    if (!this.client || !this.client.torrents || this.jobs.size === 0) return;
+    let changed = false;
+
+    for (const job of this.jobs.values()) {
+      if (job.status !== 'downloading') continue;
+      const torrent = this.client.torrents.find(
+        (t: any) => (job.infoHash && t.infoHash === job.infoHash) || t.magnetURI === job.magnet
+      );
+
+      if (!torrent) {
+        if (job.downloadSpeed !== 0 || job.uploadSpeed !== 0) {
+          job.downloadSpeed = 0;
+          job.uploadSpeed = 0;
+          job.eta = 0;
+          changed = true;
+        }
+        continue;
+      }
+
+      const curSpeed = torrent.downloadSpeed || 0;
+      const curUpload = torrent.uploadSpeed || 0;
+      const curPeers = torrent.numPeers || 0;
+      const curEta = (curSpeed > 0 && torrent.timeRemaining && isFinite(torrent.timeRemaining))
+        ? Math.round(torrent.timeRemaining / 1000)
+        : 0;
+      const curProgress = Math.round(torrent.progress * 1000) / 10;
+      const curDownloaded = torrent.downloaded || 0;
+      const curTotal = torrent.length || job.totalBytes || 0;
+
+      // When connected peers are low, periodically poke DHT lookup to keep finding new seeds
+      if (curPeers < 5 && torrent.infoHash && (this.client as any).dht && Math.random() < 0.15) {
+        try {
+          (this.client as any).dht.lookup(torrent.infoHash);
+        } catch {}
+      }
+
+      if (
+        job.downloadSpeed !== curSpeed ||
+        job.uploadSpeed !== curUpload ||
+        job.numPeers !== curPeers ||
+        job.eta !== curEta ||
+        job.progress !== curProgress ||
+        job.downloadedBytes !== curDownloaded ||
+        job.totalBytes !== curTotal
+      ) {
+        job.downloadSpeed = curSpeed;
+        job.uploadSpeed = curUpload;
+        job.numPeers = curPeers;
+        job.eta = curEta;
+        job.progress = curProgress;
+        job.downloadedBytes = curDownloaded;
+        job.totalBytes = curTotal;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.notifyUpdate();
     }
   }
 
@@ -151,6 +215,13 @@ export class TorrentService {
           progress: f.progress * 100
         }));
       }
+      // Trigger DHT peer lookup immediately once we have confirmed infoHash
+      if ((this.client as any)?.dht && torrent.infoHash) {
+        try {
+          (this.client as any).dht.lookup(torrent.infoHash);
+        } catch {}
+      }
+
       this.notifyUpdate();
       this.saveJobs();
     });
@@ -312,7 +383,9 @@ export class TorrentService {
     try {
       const torrent = this.client.add(magnet, {
         path: downloadDir,
-        announce: DEFAULT_TRACKERS
+        announce: DEFAULT_TRACKERS,
+        strategy: 'rarest',
+        maxWebConns: 8
       });
 
       this.attachTorrentListeners(torrent, job, name);
@@ -374,7 +447,9 @@ export class TorrentService {
     try {
       const torrent = this.client.add(job.magnet, {
         path: job.destination,
-        announce: DEFAULT_TRACKERS
+        announce: DEFAULT_TRACKERS,
+        strategy: 'rarest',
+        maxWebConns: 8
       });
       this.attachTorrentListeners(torrent, job, job.name);
       return true;
@@ -407,6 +482,10 @@ export class TorrentService {
   }
 
   public destroy(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
     if (this.client) {
       try {
         this.client.destroy();

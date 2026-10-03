@@ -1,19 +1,6 @@
 import { TorrentCategory, TorrentSearchResult } from '../../shared/types';
 import { loggerService } from './loggerService';
-
-const DEFAULT_TRACKERS = [
-  'udp://tracker.opentrackr.org:1337/announce',
-  'udp://open.stealth.si:80/announce',
-  'udp://tracker.torrent.eu.org:451/announce',
-  'udp://tracker.bittor.pw:1337/announce',
-  'udp://public.popcorn-tracker.org:6969/announce',
-  'udp://tracker.dler.org:6969/announce',
-  'udp://exodus.desync.com:6969',
-  'udp://open.demonii.com:1337/announce',
-  'udp://explodie.org:6969/announce',
-  'udp://tracker.openbittorrent.com:80',
-  'udp://tracker.coppersurfer.tk:6969'
-];
+import { DEFAULT_TRACKERS } from './torrentConstants';
 
 const YTS_BASE_URLS = [
   'https://movies-api.accel.li/api/v2',

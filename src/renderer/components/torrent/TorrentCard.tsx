@@ -26,12 +26,12 @@ export const TorrentCard: React.FC<Props> = ({ job }) => {
   const formatBytes = (bytes: number) => {
     if (!bytes || isNaN(bytes) || bytes <= 0) return '0 B';
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    const i = Math.min(units.length - 1, Math.max(0, Math.floor(Math.log(bytes) / Math.log(1024))));
     return `${(bytes / Math.pow(1024, i)).toFixed(i > 1 ? 2 : 0)} ${units[i]}`;
   };
 
   const formatSpeed = (bytesPerSec: number) => {
-    if (!bytesPerSec || bytesPerSec <= 0) return '0 B/s';
+    if (!bytesPerSec || bytesPerSec <= 0 || isNaN(bytesPerSec)) return '0 B/s';
     return `${formatBytes(bytesPerSec)}/s`;
   };
 
@@ -43,6 +43,7 @@ export const TorrentCard: React.FC<Props> = ({ job }) => {
     if (mins < 60) return `${mins}m ${secs}s`;
     const hours = Math.floor(mins / 60);
     const remMins = mins % 60;
+    if (hours > 99) return '> 99h';
     return `${hours}h ${remMins}m`;
   };
 
@@ -65,14 +66,18 @@ export const TorrentCard: React.FC<Props> = ({ job }) => {
 
   const getStatusBadge = () => {
     switch (job.status) {
-      case 'downloading':
+      case 'downloading': {
+        const isConnecting = job.downloadSpeed === 0 && job.numPeers === 0;
+        const isStalled = job.downloadSpeed === 0 && (job.downloadedBytes > 0 || job.totalBytes > 0);
         return (
           <span
             style={{
               padding: '2px 8px',
               borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'rgba(36, 123, 160, 0.2)',
-              color: 'var(--color-accent-400)',
+              backgroundColor: isConnecting
+                ? 'rgba(251, 191, 36, 0.15)'
+                : 'rgba(36, 123, 160, 0.2)',
+              color: isConnecting ? 'var(--status-warning)' : 'var(--color-accent-400)',
               fontSize: 'var(--font-size-xs)',
               fontWeight: 600,
               display: 'inline-flex',
@@ -81,9 +86,10 @@ export const TorrentCard: React.FC<Props> = ({ job }) => {
             }}
           >
             <ArrowDown size={12} strokeWidth={2.5} />
-            Downloading
+            {isConnecting ? 'Finding Peers' : isStalled ? 'Stalled / Connecting' : 'Downloading'}
           </span>
         );
+      }
       case 'seeding':
         return (
           <span
@@ -303,7 +309,7 @@ export const TorrentCard: React.FC<Props> = ({ job }) => {
                 {job.numPeers} peers
               </span>
 
-              {job.eta > 0 && (
+              {job.downloadSpeed > 0 && job.eta > 0 && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                   <Clock size={13} color="var(--text-muted)" />
                   ETA: {formatEta(job.eta)}
