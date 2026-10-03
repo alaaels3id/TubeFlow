@@ -369,12 +369,30 @@ export class DownloadService {
       args.push('--audio-quality', '0');
     } else {
       const height = parseInt(job.quality, 10);
-      if (height && !isNaN(height)) {
-        args.push('-f', `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`);
+      if (job.format === 'mp4') {
+        // Enforce maximum universal compatibility (H.264/AVC video + AAC audio)
+        // Vital for Smart TVs (Samsung Series 5, LG, Sony), USB sticks, and legacy media players
+        if (height && !isNaN(height)) {
+          args.push(
+            '-f',
+            `bestvideo[height<=${height}][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=${height}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`
+          );
+        } else {
+          args.push(
+            '-f',
+            'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best'
+          );
+        }
+        args.push('--merge-output-format', 'mp4');
+        args.push('--postprocessor-args', 'Merger:-movflags +faststart');
       } else {
-        args.push('-f', 'bestvideo+bestaudio/best');
+        if (height && !isNaN(height)) {
+          args.push('-f', `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`);
+        } else {
+          args.push('-f', 'bestvideo+bestaudio/best');
+        }
+        args.push('--merge-output-format', job.format);
       }
-      args.push('--merge-output-format', job.format);
     }
 
     let detectedFilePath = '';
