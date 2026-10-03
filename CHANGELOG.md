@@ -5,6 +5,24 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.3] - 2026-10-03
+
+### 🐛 Bug Fixes & Improvements
+
+#### 🧲 WebTorrent Core Engine & Active Peer Discovery Fixes
+- **Resolved WebTorrent `arr2hex` Crash**: Patched `uint8-util` string handling in both Node and browser bundles, eliminating the fatal `TypeError [ERR_INVALID_ARG_TYPE]` that previously halted torrent downloads and froze cards at `0.0% (0 B / 0 B) 0 peers`.
+- **Global Open Trackers Swarm**: Automatically announces 10 high-speed public trackers (`OpenTrackr`, `torrent.eu.org`, `openbittorrent`, `dler.org`, etc.) on all added and resumed torrents, achieving immediate 30+ peer connections and multi-MB/s speeds.
+- **Real-Time Peer & Metadata Telemetry**: Connected `torrent.on('wire')`, `torrent.on('metadata')`, and `torrent.on('infoHash')` listeners immediately upon job creation, ensuring accurate live peer counts, true file sizes, and dynamic file titles.
+- **Direct `.torrent` URL Auto-Resolution**: Added remote `.torrent` file buffer fetching and bencode parsing, converting direct `.torrent` links received from the Chrome extension Bridge or web queries into rich Magnet URIs automatically.
+
+### ✨ New Features
+
+#### 🍎 TorrentMac Provider Integration
+- **macOS Applications & Games Indexer**: Added dedicated integration with [TorrentMac](https://www.torrentmac.net/) featuring real-time search for Mac software, utilities, and games.
+- **Multi-Source Aggregation**: TorrentMac is automatically queried under "All Sources" for applications and games, complete with custom rose/red badging and thumbnail posters.
+
+---
+
 ## [1.8.2] - 2026-10-03
 
 ### 🐛 Bug Fixes & Improvements
