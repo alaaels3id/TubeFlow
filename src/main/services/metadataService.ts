@@ -32,7 +32,162 @@ export class MetadataService {
     }
   }
 
-  public async analyze(url: string): Promise<AnalyzeResult> {
+  public normalizeVideoUrl(inputUrl: string): string {
+    const trimmed = (inputUrl || '').trim();
+    if (!trimmed) return trimmed;
+
+    try {
+      // 1. VK video_ext.php embed -> https://vk.com/video{oid}_{id}
+      if (/vk\.(?:com|ru)\/video_ext\.php/i.test(trimmed)) {
+        const urlObj = new URL(trimmed);
+        const oid = urlObj.searchParams.get('oid');
+        const id = urlObj.searchParams.get('id');
+        if (oid && id) {
+          return `https://vk.com/video${oid}_${id}`;
+        }
+      }
+
+      // 2. OK.ru videoembed -> https://ok.ru/video/{id}
+      const okEmbedMatch = trimmed.match(/ok\.ru\/videoembed\/(\d+)/i);
+      if (okEmbedMatch && okEmbedMatch[1]) {
+        return `https://ok.ru/video/${okEmbedMatch[1]}`;
+      }
+
+      // 3. YouTube embed -> https://www.youtube.com/watch?v={id}
+      const ytEmbedMatch = trimmed.match(/youtube(?:-nocookie)?\.com\/embed\/([a-zA-Z0-9_-]{11})/i);
+      if (ytEmbedMatch && ytEmbedMatch[1]) {
+        return `https://www.youtube.com/watch?v=${ytEmbedMatch[1]}`;
+      }
+
+      // 4. Vimeo player embed -> https://vimeo.com/{id}
+      const vimeoEmbedMatch = trimmed.match(/player\.vimeo\.com\/video\/(\d+)/i);
+      if (vimeoEmbedMatch && vimeoEmbedMatch[1]) {
+        return `https://vimeo.com/${vimeoEmbedMatch[1]}`;
+      }
+
+      // 5. Rumble embed -> https://rumble.com/{id}
+      const rumbleEmbedMatch = trimmed.match(/rumble\.com\/embed\/([a-zA-Z0-9_-]+)/i);
+      if (rumbleEmbedMatch && rumbleEmbedMatch[1]) {
+        return `https://rumble.com/${rumbleEmbedMatch[1]}`;
+      }
+
+      // 6. Dailymotion embed -> https://www.dailymotion.com/video/{id}
+      const dmEmbedMatch = trimmed.match(/dailymotion\.com\/embed\/video\/([a-zA-Z0-9]+)/i);
+      if (dmEmbedMatch && dmEmbedMatch[1]) {
+        return `https://www.dailymotion.com/video/${dmEmbedMatch[1]}`;
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+
+    return trimmed;
+  }
+
+  private findCandidateEmbeddedUrls(html: string): string[] {
+    const candidates: string[] = [];
+    const seen = new Set<string>();
+
+    const add = (candidate: string) => {
+      const normalized = this.normalizeVideoUrl(candidate);
+      if (normalized && !seen.has(normalized)) {
+        seen.add(normalized);
+        candidates.push(normalized);
+      }
+    };
+
+    // 1. VK video_ext.php embeds
+    const vkExtRegex = /(?:https?:)?\/\/(?:www\.)?(?:vk\.com|vkvideo\.ru)\/video_ext\.php\?([^"'\s<>]+)/gi;
+    let m: RegExpExecArray | null;
+    while ((m = vkExtRegex.exec(html)) !== null) {
+      const query = m[1].replace(/&amp;/g, '&');
+      const params = new URLSearchParams(query);
+      const oid = params.get('oid');
+      const id = params.get('id');
+      if (oid && id) {
+        add(`https://vk.com/video${oid}_${id}`);
+      }
+    }
+
+    // 2. VK video links directly
+    const vkDirectRegex = /(?:https?:)?\/\/(?:www\.)?(?:vk\.com|vkvideo\.ru)\/video(-?\d+)_(\d+)/gi;
+    while ((m = vkDirectRegex.exec(html)) !== null) {
+      add(`https://vk.com/video${m[1]}_${m[2]}`);
+    }
+
+    // 3. OK.ru embeds
+    const okRegex = /(?:https?:)?\/\/(?:www\.)?ok\.ru\/videoembed\/(\d+)/gi;
+    while ((m = okRegex.exec(html)) !== null) {
+      add(`https://ok.ru/video/${m[1]}`);
+    }
+
+    // 4. YouTube embeds
+    const ytRegex = /(?:https?:)?\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/([a-zA-Z0-9_-]{11})/gi;
+    while ((m = ytRegex.exec(html)) !== null) {
+      add(`https://www.youtube.com/watch?v=${m[1]}`);
+    }
+
+    // 5. Vimeo embeds
+    const vimeoRegex = /(?:https?:)?\/\/player\.vimeo\.com\/video\/(\d+)/gi;
+    while ((m = vimeoRegex.exec(html)) !== null) {
+      add(`https://vimeo.com/${m[1]}`);
+    }
+
+    // 6. Rumble embeds
+    const rumbleRegex = /(?:https?:)?\/\/(?:www\.)?rumble\.com\/embed\/([a-zA-Z0-9_-]+)/gi;
+    while ((m = rumbleRegex.exec(html)) !== null) {
+      add(`https://rumble.com/${m[1]}`);
+    }
+
+    // 7. Dailymotion embeds
+    const dmRegex = /(?:https?:)?\/\/(?:www\.)?dailymotion\.com\/embed\/video\/([a-zA-Z0-9]+)/gi;
+    while ((m = dmRegex.exec(html)) !== null) {
+      add(`https://www.dailymotion.com/video/${m[1]}`);
+    }
+
+    return candidates;
+  }
+
+  private async extractEmbeddedVideo(ytDlp: string, pageUrl: string): Promise<VideoMetadata | null> {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(pageUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        },
+        signal: controller.signal,
+        redirect: 'follow'
+      });
+      clearTimeout(timeout);
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('text/html') && !contentType.includes('application/xhtml')) {
+        return null;
+      }
+
+      const html = await res.text();
+      const candidates = this.findCandidateEmbeddedUrls(html);
+
+      for (const candidate of candidates) {
+        try {
+          const video = await this.fetchVideoMetadata(ytDlp, candidate);
+          if (video) {
+            return video;
+          }
+        } catch {
+          // Continue to next candidate
+        }
+      }
+    } catch {
+      // Ignore network or extraction errors
+    }
+    return null;
+  }
+
+  public async analyze(rawUrl: string): Promise<AnalyzeResult> {
+    const url = this.normalizeVideoUrl(rawUrl);
     const ytDlp = binaryService.getYtDlpPath();
     const isExplicitPlaylist = this.isPlaylistUrl(url);
 
@@ -88,8 +243,19 @@ export class MetadataService {
         }
       }
 
-      // If video extraction failed and it's a generic HTTP/HTTPS link, attempt file extraction
+      // If video extraction failed and it's a generic HTTP/HTTPS link:
       if (url.startsWith('http://') || url.startsWith('https://')) {
+        // First check if the webpage contains embedded video players (VK, OK.ru, YouTube, Vimeo, etc.)
+        try {
+          const embeddedVideo = await this.extractEmbeddedVideo(ytDlp, url);
+          if (embeddedVideo) {
+            return { type: 'video', video: embeddedVideo };
+          }
+        } catch (embedError) {
+          console.warn('Embedded video extraction probe error:', embedError);
+        }
+
+        // Second, attempt file extraction
         try {
           const file = await this.fetchFileMetadata(url);
           if (file && (file.filesizeApprox || file.extension !== 'file')) {

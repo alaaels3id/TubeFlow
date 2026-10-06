@@ -5,6 +5,18 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.5] - 2026-10-06
+
+### ✨ New Features & Improvements
+
+#### 🌐 Embedded Video Auto-Detection (VK Video, OK.ru, YouTube, Vimeo, design.rip & Web Articles)
+- **Automatic Embedded Player Resolution**: Added automatic extraction and parsing for embedded video players (`<iframe>`, `<embed>`, `<video>`) across blogs, design marketplaces, and educational portals (e.g. `design.rip`, Medium, Substack, custom CMSs).
+- **Embedded Player Normalization**: Automatically detects and translates embed player endpoints (such as `vk.com/video_ext.php`, `vkvideo.ru`, `ok.ru/videoembed/`, `youtube.com/embed/`, `player.vimeo.com/video/`, `rumble.com/embed/`, `dailymotion.com/embed/`) directly into native video URLs supported by the engine.
+- **Seamless Webpage Analysis**: When pasting a web article or blog URL where the generic video scraper fails, TubeFlow fetches and scans the webpage HTML for embedded players and resolves the actual underlying stream up to 1080p Full HD without requiring manual developer tools extraction.
+- **Video Platform Recognition**: Added VK Video (`vk.com`, `vkvideo.ru`), Odnoklassniki (`ok.ru`), and Rumble to core video platform regexes, ensuring their streams are processed by the high-performance media engine rather than treated as raw generic file downloads.
+
+---
+
 ## [1.8.4] - 2026-10-03
 
 ### 🐛 Bug Fixes & Improvements

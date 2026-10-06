@@ -77,7 +77,7 @@ export function isDirectFile(url: string, title?: string, type?: string): boolea
   if (type === 'file') return true;
   if (!url) return false;
 
-  const isVideoPlatform = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|twitter\.com|x\.com|facebook\.com|fb\.watch|instagram\.com|twitch\.tv|dailymotion\.com|soundcloud\.com|bilibili\.com)/i.test(url);
+  const isVideoPlatform = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|twitter\.com|x\.com|facebook\.com|fb\.watch|instagram\.com|twitch\.tv|dailymotion\.com|soundcloud\.com|bilibili\.com|vk\.com|vkvideo\.ru|ok\.ru|rumble\.com)/i.test(url);
   if (isVideoPlatform) {
     return false;
   }
