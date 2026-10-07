@@ -33,7 +33,27 @@ export const en = {
     approxSize: 'Approx. Size',
     download: 'Download Video',
     bestQuality: 'Best Available',
-    audioOnly: 'Audio Only'
+    audioOnly: 'Audio Only',
+    transcript: 'Transcript',
+    transcriptSub: 'Extract .txt transcript'
+  },
+  transcriptModal: {
+    title: 'Video Transcript',
+    subtitle: 'Extract and export clean full-text transcripts without downloading media',
+    language: 'Language',
+    cleanText: 'Clean Text',
+    withTimestamps: 'With Timestamps',
+    searchPlaceholder: 'Search transcript...',
+    loading: 'Extracting transcript from video...',
+    noTranscript: 'No transcript or subtitles available for this video.',
+    tryDifferentLang: 'Try selecting another language if available.',
+    copy: 'Copy to Clipboard',
+    copied: 'Copied to clipboard!',
+    saveTxt: 'Save as .TXT',
+    saveSrt: 'Save as .SRT',
+    saved: 'Transcript saved to {{path}}',
+    stats: '{{words}} words • {{lines}} lines',
+    close: 'Close'
   },
   playlist: {
     title: 'Playlist Overview',

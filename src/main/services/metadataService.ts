@@ -15,6 +15,7 @@ import {
   parseContentDispositionFilename,
   getFilenameFromUrl
 } from './downloadService';
+import { transcriptService } from './transcriptService';
 
 export class MetadataService {
   public isPlaylistUrl(url: string): boolean {
@@ -431,6 +432,8 @@ export class MetadataService {
           // Also include 'audio' resolution at the end
           availableResolutions.push('audio');
 
+          const subtitles = transcriptService.extractSubtitleTracks(data);
+
           const video: VideoMetadata = {
             id: data.id || 'video',
             url: data.webpage_url || url,
@@ -443,7 +446,8 @@ export class MetadataService {
             viewCount: data.view_count,
             uploadDate: data.upload_date,
             formats: Array.from(resMap.values()),
-            availableResolutions
+            availableResolutions,
+            subtitles: subtitles.length > 0 ? subtitles : undefined
           };
 
           resolve(video);

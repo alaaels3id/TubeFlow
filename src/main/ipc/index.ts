@@ -8,6 +8,7 @@ import { loggerService } from '../services/loggerService';
 import { updaterService } from '../services/updaterService';
 import { torrentService } from '../services/torrentService';
 import { torrentSearchService } from '../services/torrentSearchService';
+import { transcriptService } from '../services/transcriptService';
 
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   // Wire download callbacks to push to renderer
@@ -35,6 +36,18 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       throw new Error('Please enter a valid YouTube URL');
     }
     return await metadataService.analyze(url.trim());
+  });
+
+  // Transcripts
+  ipcMain.handle('transcript:get', async (_event, url: string, lang = 'en', withTimestamps = false) => {
+    if (!url || typeof url !== 'string') {
+      throw new Error('Please enter a valid video URL');
+    }
+    return await transcriptService.getTranscript(url.trim(), lang, withTimestamps);
+  });
+
+  ipcMain.handle('transcript:save', async (_event, options) => {
+    return await transcriptService.saveTranscript(options);
   });
 
   // Download actions

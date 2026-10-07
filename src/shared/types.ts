@@ -24,6 +24,19 @@ export interface FormatOption {
   note?: string;
 }
 
+export interface SubtitleTrack {
+  code: string;
+  name: string;
+  isAuto: boolean;
+}
+
+export interface TranscriptResult {
+  title: string;
+  text: string;
+  lang: string;
+  availableLanguages: SubtitleTrack[];
+}
+
 export interface VideoMetadata {
   id: string;
   url: string;
@@ -37,6 +50,7 @@ export interface VideoMetadata {
   uploadDate?: string;
   formats: FormatOption[];
   availableResolutions: string[]; // sorted desc: ['2160p', '1440p', '1080p', '720p', '480p', '360p', 'audio']
+  subtitles?: SubtitleTrack[];
 }
 
 export interface PlaylistItem {

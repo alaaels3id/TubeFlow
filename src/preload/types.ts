@@ -6,12 +6,17 @@ import {
   SystemDependencies,
   UpdateStatus,
   TorrentSearchResult,
-  TorrentJob
+  TorrentJob,
+  TranscriptResult
 } from '../shared/types';
 
 export interface ElectronAPI {
   // YouTube Metadata
   analyzeUrl: (url: string) => Promise<AnalyzeResult>;
+  
+  // Transcripts
+  getTranscript: (url: string, lang?: string, withTimestamps?: boolean) => Promise<TranscriptResult>;
+  saveTranscript: (options: { title: string; text: string; format?: 'txt' | 'srt'; destination?: string }) => Promise<string>;
   
   // Downloads
   startDownload: (options: {

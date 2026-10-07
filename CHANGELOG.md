@@ -5,6 +5,23 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.6] - 2026-10-07
+
+### ✨ New Features & Improvements
+
+#### 📝 Video Transcript & Subtitle Extraction (.txt / .srt)
+- **Zero Media Download**: Generates and extracts full video transcripts directly from video URLs using `--skip-download`, completing in 1–2 seconds with minimal bandwidth consumption.
+- **Clean Reading Prose**: Automatically cleans raw subtitle cues and styling tags while deduplicating rolling auto-captions into natural, continuous reading paragraphs.
+- **Interactive Transcript Modal**:
+  - **Live Preview & In-Transcript Search**: Read and search the complete text directly inside the desktop app.
+  - **Multi-Language Selector**: Choose between available manual and auto-generated subtitle tracks (English, Arabic, Spanish, etc.).
+  - **Timestamps Toggle**: Easily switch between clean continuous reading text and timestamped lines (`[MM:SS]`).
+  - **One-Click Export**: Copy directly to clipboard or save as `.txt` (or `.srt`) into the Downloads directory.
+- **Queue Download Option**: Added `TXT (Transcript)` option to the format dropdown on the video card to queue transcript-only downloads alongside standard video formats.
+- **Full Localization**: Integrated Arabic and English translations across all transcript UI dialogs.
+
+---
+
 ## [1.8.5] - 2026-10-06
 
 ### ✨ New Features & Improvements

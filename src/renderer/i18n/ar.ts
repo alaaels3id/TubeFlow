@@ -33,7 +33,27 @@ export const ar = {
     approxSize: 'الحجم التقريبي',
     download: 'تنزيل الفيديو',
     bestQuality: 'أعلى جودة متوفرة',
-    audioOnly: 'صوت فقط'
+    audioOnly: 'صوت فقط',
+    transcript: 'تفريغ نصي',
+    transcriptSub: 'استخراج النص .txt'
+  },
+  transcriptModal: {
+    title: 'التفريغ النصي للفيديو',
+    subtitle: 'استخراج وحفظ النص الكامل للفيديو بدون تنزيل الوسائط',
+    language: 'اللغة',
+    cleanText: 'نص مقروء',
+    withTimestamps: 'مع التوقيتات',
+    searchPlaceholder: 'بحث في النص...',
+    loading: 'جاري استخراج وتجهيز التفريغ النصي...',
+    noTranscript: 'لا يتوفر تفريغ نصي أو ترجمة لهذا الفيديو.',
+    tryDifferentLang: 'جرّب اختيار لغة أخرى من القائمة إن وجدت.',
+    copy: 'نسخ إلى الحافظة',
+    copied: 'تم النسخ إلى الحافظة!',
+    saveTxt: 'حفظ كملف .TXT',
+    saveSrt: 'حفظ كملف .SRT',
+    saved: 'تم حفظ النص في {{path}}',
+    stats: '{{words}} كلمة • {{lines}} سطر',
+    close: 'إغلاق'
   },
   playlist: {
     title: 'نظرة عامة على قائمة التشغيل',

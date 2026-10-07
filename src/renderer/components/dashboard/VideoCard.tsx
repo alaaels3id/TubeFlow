@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Download, Folder, User, Clock, CheckCircle2, Film, HardDrive } from 'lucide-react';
+import { Download, Folder, User, Clock, CheckCircle2, Film, HardDrive, FileText } from 'lucide-react';
 import { VideoMetadata } from '@shared/types';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { useQueueStore } from '../../stores/useQueueStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { useI18n } from '../../hooks/useI18n';
 import { formatBytes } from '../../utils/format';
+import { TranscriptModal } from './TranscriptModal';
 
 interface VideoCardProps {
   video: VideoMetadata;
@@ -24,11 +25,12 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
       : video.availableResolutions[0] || '1080p'
   );
 
-  const [selectedFormat, setSelectedFormat] = useState<'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus'>(
+  const [selectedFormat, setSelectedFormat] = useState<'mp4' | 'webm' | 'mp3' | 'm4a' | 'opus' | 'txt'>(
     settings.defaultFormat || 'mp4'
   );
 
   const [isStarting, setIsStarting] = useState(false);
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
 
   const handleDownload = async () => {
     setIsStarting(true);
@@ -39,7 +41,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
         title: video.title,
         thumbnail: video.thumbnail,
         channel: video.channel,
-        quality: selectedQuality,
+        quality: selectedFormat === 'txt' ? 'Transcript' : selectedQuality,
         format: selectedFormat,
         destination: settings.downloadDirectory,
         filesizeApprox: currentSize,
@@ -59,9 +61,11 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
     }
   };
 
+  const isTranscript = selectedFormat === 'txt';
   const isAudioOnly = selectedQuality === 'audio' || ['mp3', 'm4a', 'opus'].includes(selectedFormat);
 
   const getSizeForResolution = (res: string): number => {
+    if (isTranscript) return 0;
     if (res === 'audio' || isAudioOnly) {
       const audioFmt = video.formats.find((f) => f.resolution === 'audio');
       if (audioFmt?.filesizeApprox) return audioFmt.filesizeApprox;
@@ -212,11 +216,18 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
                 value={selectedFormat}
                 onChange={(e) => setSelectedFormat(e.target.value as any)}
               >
-                {isAudioOnly ? (
+                {isTranscript ? (
+                  <>
+                    <option value="txt">TXT ({t('videoCard.transcript')})</option>
+                    <option value="mp4">MP4 (Video)</option>
+                    <option value="mp3">MP3 (Audio)</option>
+                  </>
+                ) : isAudioOnly ? (
                   <>
                     <option value="mp3">MP3 (Audio)</option>
                     <option value="m4a">M4A (AAC)</option>
                     <option value="opus">Opus</option>
+                    <option value="txt">TXT ({t('videoCard.transcript')})</option>
                   </>
                 ) : (
                   <>
@@ -224,6 +235,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
                     <option value="webm">WebM (Video)</option>
                     <option value="mp3">MP3 (Audio Only)</option>
                     <option value="m4a">M4A (Audio Only)</option>
+                    <option value="txt">TXT ({t('videoCard.transcript')})</option>
                   </>
                 )}
               </select>
@@ -286,22 +298,60 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
                   ~{formatBytes(currentSize)}
                 </span>
               </div>
+            ) : isTranscript ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: 'var(--color-accent-500)',
+                  fontSize: 'var(--font-size-sm)'
+                }}
+              >
+                <FileText size={15} />
+                <span>Text Transcript (.txt)</span>
+              </div>
             ) : (
               <div />
             )}
 
-            <button
-              className="btn btn-primary"
-              onClick={handleDownload}
-              disabled={isStarting}
-              style={{ minWidth: 160 }}
-            >
-              <Download size={16} />
-              <span>{t('videoCard.download')}</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsTranscriptOpen(true)}
+                title={t('videoCard.transcriptSub')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  height: 38,
+                  padding: '0 14px'
+                }}
+              >
+                <FileText size={16} color="var(--color-primary-400)" />
+                <span>{t('videoCard.transcript')}</span>
+              </button>
+
+              <button
+                className="btn btn-primary"
+                onClick={handleDownload}
+                disabled={isStarting}
+                style={{ minWidth: 150, height: 38 }}
+              >
+                <Download size={16} />
+                <span>{t('videoCard.download')}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      <TranscriptModal
+        video={video}
+        isOpen={isTranscriptOpen}
+        onClose={() => setIsTranscriptOpen(false)}
+      />
     </div>
   );
 };

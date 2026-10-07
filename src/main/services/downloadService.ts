@@ -6,6 +6,7 @@ import { binaryService } from './binaryService';
 import { storageService } from './storageService';
 import { notificationService } from './notificationService';
 import { sanitizeFilename, formatDuration } from '../utils/sanitize';
+import { transcriptService } from './transcriptService';
 
 interface ActiveProcess {
   job: DownloadJob;
@@ -314,6 +315,10 @@ export class DownloadService {
   }
 
   private executeJob(job: DownloadJob): void {
+    if (job.format === 'txt' || job.quality === 'transcript') {
+      this.executeTranscriptJob(job);
+      return;
+    }
     if (job.type === 'file' || isDirectFile(job.url, job.title, job.type)) {
       this.executeDirectFileJob(job);
       return;
@@ -672,6 +677,78 @@ export class DownloadService {
       // Check next queued job
       this.processNextInQueue();
     });
+  }
+
+  private async executeTranscriptJob(job: DownloadJob): Promise<void> {
+    const settings = storageService.getSettings();
+    const isArabic = settings.language === 'ar';
+    job.status = 'downloading';
+    job.progress = 15;
+    job.speed = 0;
+    this.emitProgress(job);
+
+    try {
+      job.progress = 40;
+      this.emitProgress(job);
+
+      const result = await transcriptService.getTranscript(job.url, 'en', false);
+
+      job.progress = 80;
+      this.emitProgress(job);
+
+      const savedPath = await transcriptService.saveTranscript({
+        title: job.title || result.title,
+        text: result.text,
+        format: 'txt',
+        destination: job.destination
+      });
+
+      job.filePath = savedPath;
+      job.status = 'completed';
+      job.progress = 100;
+      job.remainingSeconds = 0;
+      job.completedAt = new Date().toISOString();
+
+      const stats = fs.existsSync(savedPath) ? fs.statSync(savedPath) : null;
+      if (stats) {
+        job.downloadedBytes = stats.size;
+        job.totalBytes = stats.size;
+      }
+
+      this.emitProgress(job);
+      if (this.onCompletedCallback) this.onCompletedCallback(job);
+
+      storageService.addHistoryItem({
+        id: job.id,
+        url: job.url,
+        type: 'file',
+        title: job.title || result.title,
+        thumbnail: job.thumbnail,
+        channel: job.channel,
+        quality: 'Transcript',
+        format: 'txt',
+        filePath: savedPath,
+        fileSize: stats?.size,
+        duration: job.duration,
+        completedAt: job.completedAt
+      });
+
+      const notifTitle = isArabic ? 'اكتمل تنزيل النص بنجاح 📝' : 'Transcript Downloaded 📝';
+      const notifBody = isArabic
+        ? `تم حفظ النص: ${job.title || result.title}`
+        : `Saved transcript: ${job.title || result.title}`;
+      notificationService.notify(notifTitle, notifBody);
+
+      this.processNextInQueue();
+    } catch (err: any) {
+      job.status = 'failed';
+      job.errorMessage = err.message || 'Failed to extract video transcript';
+      job.speed = 0;
+      job.remainingSeconds = 0;
+      this.emitProgress(job);
+      if (this.onFailedCallback) this.onFailedCallback(job);
+      this.processNextInQueue();
+    }
   }
 
   private async executeDirectFileJob(job: DownloadJob): Promise<void> {

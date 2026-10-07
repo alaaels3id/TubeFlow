@@ -5,6 +5,11 @@ import { DownloadJob } from '../shared/types';
 const api: ElectronAPI = {
   analyzeUrl: (url: string) => ipcRenderer.invoke('youtube:analyze', url),
 
+  getTranscript: (url: string, lang?: string, withTimestamps?: boolean) =>
+    ipcRenderer.invoke('transcript:get', url, lang, withTimestamps),
+  saveTranscript: (options: { title: string; text: string; format?: 'txt' | 'srt'; destination?: string }) =>
+    ipcRenderer.invoke('transcript:save', options),
+
   startDownload: (options) => ipcRenderer.invoke('download:start', options),
   pauseDownload: (id: string) => ipcRenderer.invoke('download:pause', id),
   pauseAll: () => ipcRenderer.invoke('download:pauseAll'),
