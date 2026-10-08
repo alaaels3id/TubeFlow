@@ -5,6 +5,18 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.7] - 2026-10-08
+
+### ✨ New Features & Improvements
+
+#### 🎬 Video Preview Player & Enhanced Transcript Fallback
+- **Video Preview Modal**: Preview videos before downloading with an embedded player (supporting YouTube, Vimeo, and direct video streams) directly within the desktop application.
+- **Contextual Preview Action**: Added a dedicated Preview button and interactive thumbnail play overlay shown exclusively for video links and when downloading video formats (automatically hidden for audio-only and transcript downloads).
+- **Graceful Transcript Fallback**: Automatically falls back to available language tracks when requested subtitles are not present on the platform, providing clean informative feedback rather than technical errors.
+- **Direct Browser Preview Option**: Added one-click external browser preview for video links that do not support in-app iframe embedding.
+
+---
+
 ## [1.8.6] - 2026-10-07
 
 ### ✨ New Features & Improvements

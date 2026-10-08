@@ -1,6 +1,6 @@
 {
   "name": "tubeflow",
-  "version": "1.8.6",
+  "version": "1.8.7",
   "type": "module",
   "description": "Modern YouTube Video & Playlist Downloader Desktop Application",
   "author": "TubeFlow",
@@ -52,6 +52,7 @@
       "category": "public.app-category.utilities",
       "icon": "build/icon.icns",
       "identity": "Apple Development: alaa.els3id@icloud.com (A59KS552Q4)",
+      "timestamp": "none",
       "target": [
         "dmg",
         "zip"
