@@ -5,6 +5,17 @@ All notable changes to **TubeFlow** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.8] - 2026-10-08
+
+### 🐛 Bug Fixes & Improvements
+
+#### 🎬 Fix YouTube Embedded Player Error 153 in Preview
+- **Referer & Origin Header Injection**: Resolved YouTube Error 153 ("Video player configuration error") by injecting valid `Referer: https://www.youtube.com/` and `Origin: https://www.youtube.com` request headers via Electron's `webRequest.onBeforeSendHeaders`.
+- **X-Frame-Options Stripping**: Stripped restrictive `X-Frame-Options` headers on video responses in Electron to ensure smooth embedded playback within desktop iframes.
+- **CSP & Referrer Policy Enhancement**: Added `strict-origin-when-cross-origin` and updated frame-src Content-Security-Policy directives in `index.html`.
+
+---
+
 ## [1.8.7] - 2026-10-08
 
 ### ✨ New Features & Improvements

@@ -189,6 +189,7 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
                 height: '100%',
                 border: 'none'
               }}
+              referrerPolicy="strict-origin-when-cross-origin"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
             />
@@ -203,6 +204,7 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
                 height: '100%',
                 border: 'none'
               }}
+              referrerPolicy="strict-origin-when-cross-origin"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
             />

@@ -55,6 +55,32 @@ function createWindow() {
     callback(true);
   });
 
+  // Fix YouTube embed Error 153 in Electron (injected Referer/Origin headers)
+  mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.vimeo.com/*'] },
+    (details, callback) => {
+      const url = details.url || '';
+      if (url.includes('youtube.com') || url.includes('youtube-nocookie.com')) {
+        details.requestHeaders['Referer'] = 'https://www.youtube.com/';
+        details.requestHeaders['Origin'] = 'https://www.youtube.com';
+      } else if (url.includes('vimeo.com')) {
+        details.requestHeaders['Referer'] = 'https://vimeo.com/';
+        details.requestHeaders['Origin'] = 'https://vimeo.com';
+      }
+      callback({ cancel: false, requestHeaders: details.requestHeaders });
+    }
+  );
+
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*'] },
+    (details, callback) => {
+      const responseHeaders = { ...details.responseHeaders };
+      delete responseHeaders['x-frame-options'];
+      delete responseHeaders['X-Frame-Options'];
+      callback({ cancel: false, responseHeaders });
+    }
+  );
+
   registerIpcHandlers(mainWindow);
   bridgeService.start(mainWindow);
 
