@@ -35,7 +35,18 @@ export const en = {
     bestQuality: 'Best Available',
     audioOnly: 'Audio Only',
     transcript: 'Transcript',
-    transcriptSub: 'Extract .txt transcript'
+    transcriptSub: 'Extract .txt transcript',
+    preview: 'Preview',
+    previewVideo: 'Preview Video',
+    previewTooltip: 'Watch video preview before downloading'
+  },
+  videoPreviewModal: {
+    title: 'Video Preview',
+    close: 'Close',
+    downloadNow: 'Start Download Now',
+    unsupportedTitle: 'Direct Preview Unavailable',
+    unsupportedDesc: 'This video link does not support in-app embedded playback. You can open and preview it in your browser.',
+    openInBrowser: 'Open in Browser'
   },
   transcriptModal: {
     title: 'Video Transcript',

@@ -107,6 +107,16 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     return true;
   });
 
+  ipcMain.handle('system:openExternal', async (_event, url: string) => {
+    if (!url) return false;
+    try {
+      await shell.openExternal(url);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
   // Settings
   ipcMain.handle('settings:get', async () => {
     return storageService.getSettings();

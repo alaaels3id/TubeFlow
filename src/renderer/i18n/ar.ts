@@ -35,7 +35,18 @@ export const ar = {
     bestQuality: 'أعلى جودة متوفرة',
     audioOnly: 'صوت فقط',
     transcript: 'تفريغ نصي',
-    transcriptSub: 'استخراج النص .txt'
+    transcriptSub: 'استخراج النص .txt',
+    preview: 'معاينة',
+    previewVideo: 'معاينة الفيديو',
+    previewTooltip: 'مشاهدة معاينة للفيديو قبل التحميل'
+  },
+  videoPreviewModal: {
+    title: 'معاينة الفيديو',
+    close: 'إغلاق',
+    downloadNow: 'بدء التحميل الآن',
+    unsupportedTitle: 'معاينة غير مدعومة مباشرة',
+    unsupportedDesc: 'هذا الرابط لا يدعم التضمين المباشر في التطبيق، يمكنك فتحه ومعاينته في المتصفح.',
+    openInBrowser: 'فتح الفيديو في المتصفح'
   },
   transcriptModal: {
     title: 'التفريغ النصي للفيديو',

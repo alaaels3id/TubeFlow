@@ -23,6 +23,7 @@ const api: ElectronAPI = {
   sortQueue: (order: 'asc' | 'desc') => ipcRenderer.invoke('download:sortQueue', order),
   openFile: (filePath: string) => ipcRenderer.invoke('download:openFile', filePath),
   openFolder: (filePath: string) => ipcRenderer.invoke('download:openFolder', filePath),
+  openExternal: (url: string) => ipcRenderer.invoke('system:openExternal', url),
 
   onDownloadProgress: (callback: (job: DownloadJob) => void) => {
     const handler = (_event: any, job: DownloadJob) => callback(job);

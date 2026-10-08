@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Folder, User, Clock, CheckCircle2, Film, HardDrive, FileText } from 'lucide-react';
+import { Download, Folder, User, Clock, CheckCircle2, Film, HardDrive, FileText, Play } from 'lucide-react';
 import { VideoMetadata } from '@shared/types';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { useQueueStore } from '../../stores/useQueueStore';
@@ -7,6 +7,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import { useI18n } from '../../hooks/useI18n';
 import { formatBytes } from '../../utils/format';
 import { TranscriptModal } from './TranscriptModal';
+import { VideoPreviewModal } from './VideoPreviewModal';
 
 interface VideoCardProps {
   video: VideoMetadata;
@@ -31,6 +32,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
 
   const [isStarting, setIsStarting] = useState(false);
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const handleDownload = async () => {
     setIsStarting(true);
@@ -63,6 +65,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
 
   const isTranscript = selectedFormat === 'txt';
   const isAudioOnly = selectedQuality === 'audio' || ['mp3', 'm4a', 'opus'].includes(selectedFormat);
+  const isVideoDownload = !isTranscript && !isAudioOnly;
 
   const getSizeForResolution = (res: string): number => {
     if (isTranscript) return 0;
@@ -80,8 +83,12 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
   return (
     <div className="card animate-fade-in" style={{ padding: 22 }}>
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-        {/* Thumbnail with overlay duration */}
+        {/* Thumbnail with overlay duration and optional video preview trigger */}
         <div
+          onClick={() => {
+            if (isVideoDownload) setIsPreviewOpen(true);
+          }}
+          title={isVideoDownload ? t('videoCard.previewTooltip') : undefined}
           style={{
             position: 'relative',
             width: 280,
@@ -89,7 +96,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
             borderRadius: 'var(--radius-md)',
             overflow: 'hidden',
             backgroundColor: 'var(--bg-input)',
-            flexShrink: 0
+            flexShrink: 0,
+            cursor: isVideoDownload ? 'pointer' : 'default',
+            transition: 'transform 0.15s ease'
           }}
         >
           {video.thumbnail ? (
@@ -101,6 +110,38 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Film size={40} color="var(--text-muted)" />
+            </div>
+          )}
+
+          {/* Interactive Play Overlay when in Video Download mode */}
+          {isVideoDownload && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.9,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(178, 58, 72, 0.9)',
+                  backdropFilter: 'blur(6px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)'
+                }}
+              >
+                <Play size={20} color="#ffffff" fill="#ffffff" style={{ marginInlineStart: 2 }} />
+              </div>
             </div>
           )}
 
@@ -316,6 +357,25 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {isVideoDownload && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsPreviewOpen(true)}
+                  title={t('videoCard.previewTooltip')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    height: 38,
+                    padding: '0 14px'
+                  }}
+                >
+                  <Play size={15} color="var(--color-primary-400)" fill="var(--color-primary-400)" />
+                  <span>{t('videoCard.preview')}</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -352,6 +412,17 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, onDownloaded }) => 
         isOpen={isTranscriptOpen}
         onClose={() => setIsTranscriptOpen(false)}
       />
+
+      {isVideoDownload && (
+        <VideoPreviewModal
+          video={video}
+          selectedQuality={selectedQuality}
+          selectedFormat={selectedFormat}
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          onDownload={handleDownload}
+        />
+      )}
     </div>
   );
 };

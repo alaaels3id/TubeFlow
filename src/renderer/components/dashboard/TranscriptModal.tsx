@@ -69,7 +69,12 @@ export const TranscriptModal: React.FC<TranscriptModalProps> = ({ video, isOpen,
       })
       .catch((err: any) => {
         if (!isMounted) return;
-        setError(err.message || t('transcriptModal.noTranscript'));
+        const msg = String(err?.message || '');
+        if (msg.includes('No transcript or subtitle') || msg.includes('transcript:get')) {
+          setError(t('transcriptModal.noTranscript'));
+        } else {
+          setError(err.message || t('transcriptModal.noTranscript'));
+        }
         setTranscriptText('');
       })
       .finally(() => {

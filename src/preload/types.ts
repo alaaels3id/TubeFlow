@@ -46,6 +46,7 @@ export interface ElectronAPI {
   sortQueue: (order: 'asc' | 'desc') => Promise<DownloadJob[]>;
   openFile: (filePath: string) => Promise<boolean>;
   openFolder: (filePath: string) => Promise<boolean>;
+  openExternal: (url: string) => Promise<boolean>;
   
   // Progress event subscriptions
   onDownloadProgress: (callback: (job: DownloadJob) => void) => () => void;

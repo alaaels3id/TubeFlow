@@ -83,7 +83,7 @@ export class TranscriptService {
         '--write-subs',
         '--write-auto-subs',
         '--sub-lang',
-        langToFetch ? `${langToFetch}.*,${langToFetch}` : 'en.*,en,ar.*,ar',
+        langToFetch ? `${langToFetch}.*,${langToFetch},en.*,en` : 'en.*,en,ar.*,ar',
         '--convert-subs',
         'vtt',
         '--no-warnings',
@@ -105,7 +105,7 @@ export class TranscriptService {
           if (err) {
             return reject(
               new Error(
-                `Could not download transcript for language "${requestedLang}". Subtitles may not be available for this video.`
+                `Could not download transcript for this video. Subtitles may not be available from the host platform.`
               )
             );
           }
@@ -117,7 +117,7 @@ export class TranscriptService {
       const files = fs.readdirSync(tempDir).filter((f) => f.endsWith('.vtt') || f.endsWith('.srt'));
       if (files.length === 0) {
         throw new Error(
-          `No transcript or subtitle tracks found for "${requestedLang}". Please try another language if available.`
+          `No transcript or subtitle tracks found for this video. Subtitles may not be available from the host platform.`
         );
       }
 
