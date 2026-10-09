@@ -95,25 +95,35 @@ git push origin "v$TARGET_VERSION"
 
 # 8. GitHub Release
 echo "🚀 [6/6] Publishing to GitHub Releases..."
-if gh release view "v$TARGET_VERSION" >/dev/null 2>&1; then
-  echo "Release v$TARGET_VERSION exists. Uploading updated assets with --clobber..."
-  gh release upload "v$TARGET_VERSION" \
-    "$DMG_FILE" \
-    "$DMG_FILE.blockmap" \
-    "$ZIP_FILE" \
-    "$ZIP_FILE.blockmap" \
-    "$YML_FILE" \
-    --clobber
-else
-  echo "Creating new GitHub release v$TARGET_VERSION..."
+if ! gh release view "v$TARGET_VERSION" >/dev/null 2>&1; then
+  echo "Creating GitHub release v$TARGET_VERSION..."
   gh release create "v$TARGET_VERSION" \
-    "$DMG_FILE" \
-    "$DMG_FILE.blockmap" \
-    "$ZIP_FILE" \
-    "$ZIP_FILE.blockmap" \
-    "$YML_FILE" \
     --title "v$TARGET_VERSION" \
     --generate-notes
+fi
+
+echo "Uploading release assets for v$TARGET_VERSION..."
+UPLOAD_SUCCESS=0
+for attempt in 1 2 3 4; do
+  echo "Upload attempt $attempt of 4..."
+  if gh release upload "v$TARGET_VERSION" \
+    "$DMG_FILE" \
+    "$DMG_FILE.blockmap" \
+    "$ZIP_FILE" \
+    "$ZIP_FILE.blockmap" \
+    "$YML_FILE" \
+    --clobber; then
+    UPLOAD_SUCCESS=1
+    break
+  else
+    echo "⚠️ Upload attempt $attempt encountered network issue, waiting 5 seconds before retry..."
+    sleep 5
+  fi
+done
+
+if [ "$UPLOAD_SUCCESS" -ne 1 ]; then
+  echo "❌ Error: Failed to upload release assets after 4 attempts."
+  exit 1
 fi
 
 echo ""
