@@ -45,9 +45,14 @@ function createWindow() {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      webviewTag: true
     }
   });
+
+  const CHROME_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+  mainWindow.webContents.setUserAgent(CHROME_UA);
+  mainWindow.webContents.session.setUserAgent(CHROME_UA);
 
   // Security headers & permissions
   mainWindow.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => {
@@ -55,12 +60,13 @@ function createWindow() {
     callback(true);
   });
 
-  // Fix YouTube embed Error 153 in Electron (injected Referer/Origin headers)
+  // Headers handling for YouTube, Vimeo, and video streaming
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
-    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.vimeo.com/*'] },
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.googlevideo.com/*', '*://*.vimeo.com/*'] },
     (details, callback) => {
       const url = details.url || '';
-      if (url.includes('youtube.com') || url.includes('youtube-nocookie.com')) {
+      details.requestHeaders['User-Agent'] = CHROME_UA;
+      if (url.includes('youtube.com') || url.includes('youtube-nocookie.com') || url.includes('googlevideo.com')) {
         details.requestHeaders['Referer'] = 'https://www.youtube.com/';
         details.requestHeaders['Origin'] = 'https://www.youtube.com';
       } else if (url.includes('vimeo.com')) {
@@ -72,7 +78,7 @@ function createWindow() {
   );
 
   mainWindow.webContents.session.webRequest.onHeadersReceived(
-    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*'] },
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.googlevideo.com/*'] },
     (details, callback) => {
       const responseHeaders = { ...details.responseHeaders };
       delete responseHeaders['x-frame-options'];

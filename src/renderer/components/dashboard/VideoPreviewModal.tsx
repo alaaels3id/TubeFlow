@@ -21,6 +21,7 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
   onDownload
 }) => {
   const { t, isRtl } = useI18n();
+  const webviewRef = React.useRef<any>(null);
 
   const previewSource = useMemo(() => {
     if (!video || !video.url) {
@@ -37,7 +38,7 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
     if (ytId) {
       return {
         type: 'youtube' as const,
-        embedUrl: `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`
+        watchUrl: `https://www.youtube.com/watch?v=${ytId}&autoplay=1`
       };
     }
 
@@ -70,6 +71,66 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
       fallbackUrl: url
     };
   }, [video]);
+
+  // Setup clean webview player on YouTube dom-ready
+  React.useEffect(() => {
+    if (!isOpen || previewSource.type !== 'youtube') return;
+
+    const wv = webviewRef.current;
+    if (!wv) return;
+
+    const handleDomReady = () => {
+      try {
+        wv.insertCSS(`
+          #masthead-container, #secondary, #below, #chat, #guide, 
+          ytd-banner-promo-renderer, tp-yt-app-drawer, ytd-miniplayer,
+          #comments, #related {
+            display: none !important;
+          }
+          html, body, ytd-app, #content, #page-manager, ytd-watch-flexy, #columns, #primary, #primary-inner {
+            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #000 !important;
+          }
+          #full-bleed-container, #player-container-outer, #player-container-inner, #player-container {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-height: 100% !important;
+            z-index: 9999 !important;
+          }
+          .html5-video-player, video {
+            width: 100% !important;
+            height: 100% !important;
+          }
+        `);
+
+        wv.executeJavaScript(`
+          (() => {
+            const v = document.querySelector('video');
+            if (v) {
+              v.play().catch(() => {});
+            }
+            const skipTimer = setInterval(() => {
+              const skipBtn = document.querySelector('.ytp-skip-ad-button, .ytp-ad-skip-button, .ytp-ad-skip-button-modern');
+              if (skipBtn) skipBtn.click();
+            }, 500);
+            setTimeout(() => clearInterval(skipTimer), 45000);
+          })();
+        `).catch(() => {});
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    wv.addEventListener('dom-ready', handleDomReady);
+    return () => {
+      wv.removeEventListener('dom-ready', handleDomReady);
+    };
+  }, [isOpen, previewSource]);
 
   if (!isOpen) return null;
 
@@ -180,18 +241,17 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
             overflow: 'hidden'
           }}
         >
-          {previewSource.type === 'youtube' && previewSource.embedUrl && (
-            <iframe
-              src={previewSource.embedUrl}
-              title={video.title}
+          {previewSource.type === 'youtube' && previewSource.watchUrl && (
+            <webview
+              ref={webviewRef}
+              src={previewSource.watchUrl}
               style={{
                 width: '100%',
                 height: '100%',
-                border: 'none'
+                border: 'none',
+                backgroundColor: '#000000'
               }}
-              referrerPolicy="strict-origin-when-cross-origin"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
+              allowpopups={false}
             />
           )}
 
