@@ -87,37 +87,64 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
           #comments, #related {
             display: none !important;
           }
-          html, body, ytd-app, #content, #page-manager, ytd-watch-flexy, #columns, #primary, #primary-inner {
+          html, body, ytd-app, #content, #page-manager, ytd-watch-flexy {
             overflow: hidden !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #000 !important;
           }
-          #full-bleed-container, #player-container-outer, #player-container-inner, #player-container {
+          #columns, #primary, #primary-inner {
+            margin: 0 !important;
+            padding: 0 !important;
+            max-width: 100% !important;
+          }
+          #player-theater-container, #player-container-outer, #player-container {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             width: 100% !important;
             height: 100% !important;
+            max-width: 100% !important;
             max-height: 100% !important;
             z-index: 9999 !important;
           }
-          .html5-video-player, video {
+          #movie_player {
             width: 100% !important;
             height: 100% !important;
+          }
+          .html5-video-container {
+            width: 100% !important;
+            height: 100% !important;
+          }
+          video.video-stream {
+            width: 100% !important;
+            height: 100% !important;
+            left: 0 !important;
+            top: 0 !important;
+            object-fit: contain !important;
           }
         `);
 
         wv.executeJavaScript(`
           (() => {
-            const v = document.querySelector('video');
-            if (v) {
-              v.play().catch(() => {});
-            }
+            const tryPlay = () => {
+              const p = document.getElementById('movie_player');
+              if (p && typeof p.playVideo === 'function') {
+                p.playVideo();
+              }
+              const v = document.querySelector('video');
+              if (v) {
+                v.play().catch(() => {});
+              }
+            };
+            tryPlay();
+            const playInterval = setInterval(tryPlay, 800);
+            setTimeout(() => clearInterval(playInterval), 8000);
+
             const skipTimer = setInterval(() => {
               const skipBtn = document.querySelector('.ytp-skip-ad-button, .ytp-ad-skip-button, .ytp-ad-skip-button-modern');
               if (skipBtn) skipBtn.click();
-            }, 500);
+            }, 400);
             setTimeout(() => clearInterval(skipTimer), 45000);
           })();
         `).catch(() => {});

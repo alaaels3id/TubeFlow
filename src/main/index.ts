@@ -13,6 +13,9 @@ const __dirname = path.dirname(__filename);
 app.name = 'TubeFlow';
 app.setName('TubeFlow');
 
+// Allow instant video playback in preview modals without requiring user interaction
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 // Register tubeflow:// protocol
 if (process.defaultApp) {
   if (process.argv.length >= 2) {
@@ -46,7 +49,8 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      webviewTag: true
+      webviewTag: true,
+      autoplayPolicy: 'no-user-gesture-required'
     }
   });
 
