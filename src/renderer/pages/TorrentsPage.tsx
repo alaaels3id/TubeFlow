@@ -12,7 +12,8 @@ import {
   ArrowUpDown,
   Loader2,
   Inbox,
-  HardDrive
+  HardDrive,
+  X
 } from 'lucide-react';
 import { TorrentCategory, TorrentJob, TorrentProvider, TorrentSearchResult } from '../../shared/types';
 import { useTorrentStore } from '../stores/useTorrentStore';
@@ -60,19 +61,19 @@ export const TorrentsPage: React.FC = () => {
     setShowDirectBar(false);
   };
 
-  const categories: { id: TorrentCategory; label: string; icon: any }[] = [
-    { id: 'all', label: 'All', icon: Compass },
-    { id: 'movies', label: 'Movies & Video', icon: Film },
-    { id: 'apps', label: 'Applications', icon: Box },
-    { id: 'games', label: 'Games', icon: Gamepad2 },
-    { id: 'music', label: 'Music', icon: Music }
+  const categories: { id: TorrentCategory; labelKey: string; defaultLabel: string; icon: any }[] = [
+    { id: 'all', labelKey: 'torrents.categories.all', defaultLabel: 'All', icon: Compass },
+    { id: 'movies', labelKey: 'torrents.categories.movies', defaultLabel: 'Movies & Video', icon: Film },
+    { id: 'apps', labelKey: 'torrents.categories.apps', defaultLabel: 'Applications', icon: Box },
+    { id: 'games', labelKey: 'torrents.categories.games', defaultLabel: 'Games', icon: Gamepad2 },
+    { id: 'music', labelKey: 'torrents.categories.music', defaultLabel: 'Music', icon: Music }
   ];
 
-  const providers: { id: TorrentProvider; label: string }[] = [
-    { id: 'all', label: 'All Sources' },
-    { id: 'torrentmac', label: 'TorrentMac' },
-    { id: 'thepiratebay', label: 'ThePirateBay' },
-    { id: 'yts', label: 'YTS (YIFY)' }
+  const providers: { id: TorrentProvider; labelKey: string; defaultLabel: string }[] = [
+    { id: 'all', labelKey: 'torrents.providers.all', defaultLabel: 'All Sources' },
+    { id: 'torrentmac', labelKey: 'torrents.providers.torrentmac', defaultLabel: 'TorrentMac' },
+    { id: 'thepiratebay', labelKey: 'torrents.providers.thepiratebay', defaultLabel: 'ThePirateBay' },
+    { id: 'yts', labelKey: 'torrents.providers.yts', defaultLabel: 'YTS (YIFY)' }
   ];
 
   // Calculate total download speed
@@ -93,10 +94,10 @@ export const TorrentsPage: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-            Torrent Downloader
+            {t('torrents.title')}
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
-            Search movies, software applications, and games or download directly to your device
+            {t('torrents.subtitle')}
           </p>
         </div>
 
@@ -117,7 +118,7 @@ export const TorrentsPage: React.FC = () => {
             style={{ padding: '6px 14px', borderRadius: 'var(--radius-sm)' }}
           >
             <Search size={14} />
-            <span>Search & Browse</span>
+            <span>{t('torrents.searchTab')}</span>
             {searchResults.length > 0 && (
               <span
                 style={{
@@ -138,7 +139,7 @@ export const TorrentsPage: React.FC = () => {
             style={{ padding: '6px 14px', borderRadius: 'var(--radius-sm)' }}
           >
             <Download size={14} />
-            <span>Downloads</span>
+            <span>{t('torrents.downloadsTab')}</span>
             {torrents.length > 0 && (
               <span
                 style={{
@@ -179,21 +180,36 @@ export const TorrentsPage: React.FC = () => {
             />
             <input
               type="text"
+              className="input-control"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search movie name (e.g. Inception), application (e.g. Photoshop), game, or magnet..."
+              placeholder={t('torrents.searchPlaceholder')}
               style={{
                 width: '100%',
-                padding: '12px 14px 12px 42px',
+                height: 44,
+                paddingBlock: 12,
+                paddingInlineStart: 42,
+                paddingInlineEnd: searchQuery ? 40 : 14,
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-medium)',
-                backgroundColor: 'var(--bg-input)',
-                color: 'var(--text-primary)',
-                fontSize: 'var(--font-size-base)',
-                outline: 'none',
-                transition: 'border-color var(--transition-fast)'
+                fontSize: 'var(--font-size-base)'
               }}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  insetInlineEnd: 10,
+                  padding: 4,
+                  color: 'var(--text-muted)'
+                }}
+                title={t('common.clear')}
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           <button
@@ -203,7 +219,7 @@ export const TorrentsPage: React.FC = () => {
             style={{ padding: '0 24px', flexShrink: 0 }}
           >
             {isSearching ? <Loader2 size={16} className="spin" /> : <Search size={16} />}
-            <span>Search</span>
+            <span>{t('torrents.searchButton')}</span>
           </button>
         </form>
 
@@ -234,7 +250,7 @@ export const TorrentsPage: React.FC = () => {
                   }}
                 >
                   <Icon size={14} />
-                  <span>{cat.label}</span>
+                  <span>{t(cat.labelKey) || cat.defaultLabel}</span>
                 </button>
               );
             })}
@@ -283,7 +299,7 @@ export const TorrentsPage: React.FC = () => {
                       transition: 'all var(--transition-fast)'
                     }}
                   >
-                    <span>{p.label}</span>
+                    <span>{t(p.labelKey) || p.defaultLabel}</span>
                   </button>
                 );
               })}
@@ -296,7 +312,7 @@ export const TorrentsPage: React.FC = () => {
               style={{ fontSize: 'var(--font-size-xs)' }}
             >
               <Link size={13} />
-              <span>Paste Magnet</span>
+              <span>{t('torrents.pasteMagnet')}</span>
             </button>
 
             <button
@@ -306,7 +322,7 @@ export const TorrentsPage: React.FC = () => {
               style={{ fontSize: 'var(--font-size-xs)' }}
             >
               <FileCode size={13} />
-              <span>Open .torrent</span>
+              <span>{t('torrents.openTorrent')}</span>
             </button>
           </div>
         </div>
@@ -325,18 +341,15 @@ export const TorrentsPage: React.FC = () => {
           >
             <input
               type="text"
+              className="input-control"
               value={directInput}
               onChange={(e) => setDirectInput(e.target.value)}
-              placeholder="Paste magnet:?xt=urn:btih:... link here"
+              placeholder={t('torrents.directMagnetPlaceholder')}
               style={{
                 flex: 1,
                 padding: '8px 12px',
                 borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-subtle)',
-                backgroundColor: 'var(--bg-input)',
-                color: 'var(--text-primary)',
-                fontSize: 'var(--font-size-sm)',
-                outline: 'none'
+                fontSize: 'var(--font-size-sm)'
               }}
             />
             <button
@@ -345,7 +358,7 @@ export const TorrentsPage: React.FC = () => {
               disabled={!directInput.trim()}
             >
               <Download size={14} />
-              <span>Download</span>
+              <span>{t('torrents.downloadButton')}</span>
             </button>
           </div>
         )}
@@ -358,34 +371,34 @@ export const TorrentsPage: React.FC = () => {
           {searchResults.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px' }}>
               <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
-                Found <strong>{searchResults.length}</strong> torrents
+                {t('torrents.foundCount', { count: searchResults.length })}
               </span>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--font-size-xs)' }}>
                 <span style={{ color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <ArrowUpDown size={12} />
-                  Sort by:
+                  {t('torrents.sortBy')}
                 </span>
                 <button
                   className={`btn btn-sm ${selectedSort === 'seeders' ? 'btn-secondary' : 'btn-ghost'}`}
                   onClick={() => setSort('seeders')}
                   style={{ padding: '4px 8px', fontSize: 'var(--font-size-xs)' }}
                 >
-                  Seeds
+                  {t('torrents.sortSeeds')}
                 </button>
                 <button
                   className={`btn btn-sm ${selectedSort === 'size' ? 'btn-secondary' : 'btn-ghost'}`}
                   onClick={() => setSort('size')}
                   style={{ padding: '4px 8px', fontSize: 'var(--font-size-xs)' }}
                 >
-                  Size
+                  {t('torrents.sortSize')}
                 </button>
                 <button
                   className={`btn btn-sm ${selectedSort === 'name' ? 'btn-secondary' : 'btn-ghost'}`}
                   onClick={() => setSort('name')}
                   style={{ padding: '4px 8px', fontSize: 'var(--font-size-xs)' }}
                 >
-                  Name
+                  {t('torrents.sortName')}
                 </button>
               </div>
             </div>
@@ -405,7 +418,7 @@ export const TorrentsPage: React.FC = () => {
               }}
             >
               <Loader2 size={32} className="spin" color="var(--color-primary-500)" />
-              <span style={{ fontSize: 'var(--font-size-sm)' }}>Searching torrent databases...</span>
+              <span style={{ fontSize: 'var(--font-size-sm)' }}>{t('torrents.searching')}</span>
             </div>
           )}
 
@@ -426,7 +439,7 @@ export const TorrentsPage: React.FC = () => {
                 onClick={() => search()}
                 style={{ marginTop: 12 }}
               >
-                Try Again
+                {t('torrents.tryAgain')}
               </button>
             </div>
           )}
@@ -455,10 +468,10 @@ export const TorrentsPage: React.FC = () => {
             >
               <Inbox size={40} strokeWidth={1.5} />
               <span style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                No torrents found
+                {t('torrents.noResultsTitle')}
               </span>
               <span style={{ fontSize: 'var(--font-size-sm)' }}>
-                Try searching with different keywords or switch category filter to "All"
+                {t('torrents.noResultsDesc')}
               </span>
             </div>
           )}
@@ -478,10 +491,10 @@ export const TorrentsPage: React.FC = () => {
             >
               <Compass size={44} strokeWidth={1.3} color="var(--color-primary-400)" />
               <span style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Discover movies, software applications & more
+                {t('torrents.discoverTitle')}
               </span>
               <span style={{ fontSize: 'var(--font-size-sm)', maxWidth: 420, textAlign: 'center' }}>
-                Type a movie or application name above to search verified torrent networks, or paste a magnet link to start immediately.
+                {t('torrents.discoverDesc')}
               </span>
             </div>
           )}
@@ -508,17 +521,17 @@ export const TorrentsPage: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <span>
-                  Total Torrents: <strong>{torrents.length}</strong>
+                  {t('torrents.totalTorrents')} <strong>{torrents.length}</strong>
                 </span>
                 <span>
-                  Active: <strong>{activeCount}</strong>
+                  {t('torrents.active')} <strong>{activeCount}</strong>
                 </span>
               </div>
 
               {totalDownloadSpeed > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-accent-400)', fontWeight: 600 }}>
                   <HardDrive size={14} />
-                  <span>Total Speed: {formatSpeed(totalDownloadSpeed)}</span>
+                  <span>{t('torrents.totalSpeed')} {formatSpeed(totalDownloadSpeed)}</span>
                 </div>
               )}
             </div>
@@ -545,10 +558,10 @@ export const TorrentsPage: React.FC = () => {
             >
               <Inbox size={40} strokeWidth={1.5} />
               <span style={{ fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                No torrent downloads yet
+                {t('torrents.noDownloadsTitle')}
               </span>
               <span style={{ fontSize: 'var(--font-size-sm)' }}>
-                Search for a torrent above or paste a magnet link to start downloading.
+                {t('torrents.noDownloadsDesc')}
               </span>
               <button
                 className="btn btn-secondary btn-sm"
@@ -556,7 +569,7 @@ export const TorrentsPage: React.FC = () => {
                 style={{ marginTop: 6 }}
               >
                 <Search size={14} />
-                <span>Search Torrents</span>
+                <span>{t('torrents.searchTorrentsBtn')}</span>
               </button>
             </div>
           )}
